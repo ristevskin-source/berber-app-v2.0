@@ -1,0 +1,1 @@
+Dodati osnovna podesavanja salona
