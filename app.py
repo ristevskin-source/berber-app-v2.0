@@ -1,19 +1,30 @@
-Dodato Streamlit korisnicko sucelje
+import streamlit as st
+
 from database import inicijalizuj_bazu
 
+
+# pokretanje baze
 inicijalizuj_bazu()
 
-print("Baza uspešno kreirana")
-import sqlite3
 
-conn = sqlite3.connect("salon.db")
-c = conn.cursor()
+# izgled stranice
+st.set_page_config(
+    page_title="💈 Berberski salon",
+    layout="centered"
+)
 
-c.execute("""
-SELECT name FROM sqlite_master 
-WHERE type='table'
+
+st.title("💈 Berberski salon - Zakazivanje")
+
+st.success("✅ Baza uspešno povezana")
+
+
+st.write("""
+Dobrodošli u sistem za zakazivanje termina.
+
+Sledeći korak:
+- izbor usluge
+- izbor datuma
+- izbor termina
+- podaci klijenta
 """)
-
-print(c.fetchall())
-
-conn.close()
