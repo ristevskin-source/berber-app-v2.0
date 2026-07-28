@@ -1,1 +1,1 @@
-database.py
+Dodana baza i struktura tabela
