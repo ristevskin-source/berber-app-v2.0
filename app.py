@@ -429,7 +429,7 @@ def admin_rucno_zakazi():
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled (30 min slotovi)")
 
-    # --- 1. Generiši datume ---
+    # --- 1. Generiši datume za tekuću nedelju ---
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
@@ -451,7 +451,7 @@ def prikaz_nedeljnog_kalendara():
         datum, vreme, ime, telefon, usluga, cena = row
         podaci_termina[(datum, vreme)] = (ime, telefon, usluga, cena)
 
-    # --- 3. Generiši slotove na 30 min ---
+    # --- 3. Generiši slotove na 30 min (09:00 - 20:00) ---
     slotovi = []
     trenutno = datetime.strptime("09:00", "%H:%M")
     kraj = datetime.strptime("20:00", "%H:%M")
@@ -463,15 +463,12 @@ def prikaz_nedeljnog_kalendara():
         slotovi.append(vreme_str)
         trenutno += timedelta(minutes=30)
 
+    # --- 4. Pripremi podatke za HTML ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
 
-    # --- 4. HTML sa JavaScript funkcijom ---
+    # --- 5. Generiši HTML sa CSS i JavaScript ---
     html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         .kalendar-wrapper {{
             overflow-x: auto;
@@ -569,8 +566,6 @@ def prikaz_nedeljnog_kalendara():
             window.location.search = `?akcija=klik&tip=${{tip}}&datum=${{datum}}&vreme=${{vreme}}`;
         }}
     </script>
-    </head>
-    <body>
     <div class="kalendar-wrapper">
     <table class="kalendar-tabela">
         <thead>
@@ -587,7 +582,7 @@ def prikaz_nedeljnog_kalendara():
 
     for slot in slotovi:
         html += f"<tr><td class='vreme-kolona'>{slot}</td>"
-        for datum in dani_vrednosti:
+        for i, datum in enumerate(dani_vrednosti):
             if (datum, slot) in podaci_termina:
                 html += f"""
                     <td class='dan-kolona'>
@@ -610,13 +605,18 @@ def prikaz_nedeljnog_kalendara():
         </tbody>
     </table>
     </div>
-    </body>
-    </html>
+    <script>
+        // Ako postoji query parametar, skroluj na tabelu
+        if (window.location.search.includes('akcija=klik')) {
+            document.querySelector('.kalendar-wrapper').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    </script>
     """
 
+    # Prikaz HTML-a
     st.markdown(html, unsafe_allow_html=True)
 
-    # --- 5. Obrada query parametara ---
+    # --- 6. Obrada klikova preko query parametara ---
     query_params = st.query_params
     if query_params.get("akcija") == "klik":
         datum = query_params.get("datum")
@@ -631,8 +631,8 @@ def prikaz_nedeljnog_kalendara():
             st.query_params.clear()
             st.rerun()
 
-    # --- 6. Prikaz detalja ili forme ---
-    if 'kalendar_klik' in st.session_state and st.session_state['kalendar_klik'] is not None:
+    # --- 7. Prikaz detalja ili forme ---
+    if 'kalendar_klik' in st.session_state and st.session_state['kalendar_klik']:
         klik = st.session_state['kalendar_klik']
         tip = klik['tip']
         datum = klik['datum']
@@ -656,7 +656,7 @@ def prikaz_nedeljnog_kalendara():
                     st.session_state['kalendar_klik'] = None
                     st.rerun()
             else:
-                st.warning("Podaci za ovaj termin nisu pronađeni.")
+                st.warning("Podaci nisu pronađeni.")
                 st.session_state['kalendar_klik'] = None
                 st.rerun()
 
@@ -688,7 +688,7 @@ def prikaz_nedeljnog_kalendara():
                     if ime and telefon and ime.strip() and telefon.strip():
                         slotovi_za_uslugu = proveri_slotove_za_uslugu(datum, vreme, usluga_trajanje)
                         if slotovi_za_uslugu is None:
-                            st.error("❌ Nema dovoljno slobodnih termina za ovu uslugu u izabrano vreme.")
+                            st.error("❌ Nema dovoljno slobodnih termina.")
                         else:
                             if rezervisi_slotove(datum, slotovi_za_uslugu, ime, telefon, usluga_ime, usluga_cena, usluga_trajanje):
                                 st.success("✅ Termin uspešno zakazan!")
