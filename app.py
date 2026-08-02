@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime, timedelta
 import streamlit.components.v1 as components
 
-# --- СТИЛИЗАЦИЈА ---
+# --- STILIZACIJA ---
 st.markdown("""
 <style>
 .stApp { background-color: #1e1e1e; color: white; }
@@ -22,7 +22,7 @@ div[data-testid="stMetric"] [data-testid="stMetricLabel"] { color: white !import
 </style>
 """, unsafe_allow_html=True)
 
-# --- БАЗА ---
+# --- BAZA ---
 def init_db():
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
@@ -59,7 +59,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# --- СЛОТОВИ ---
+# --- SLOTOVI ---
 def generisi_slotove_za_dan(datum):
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
@@ -80,7 +80,7 @@ def generisi_slotove_za_dan(datum):
     conn.commit()
     conn.close()
 
-# --- ПОМОЋНЕ ---
+# --- POMOĆNE ---
 def formatiraj_datum(datum):
     return datum.strftime("%d.%m.%Y.")
 
@@ -92,7 +92,7 @@ def osvezi_termine():
     for datum in generisi_datume():
         generisi_slotove_za_dan(datum)
 
-# --- РЕЗЕРВАЦИЈЕ ---
+# --- REZERVACIJE ---
 def proveri_slotove_za_uslugu(datum, vreme, trajanje):
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
@@ -134,7 +134,7 @@ def rezervisi_slotove(datum, slotovi, ime, telefon, usluga_ime, usluga_cena, usl
         return True
     except Exception as e: st.error(e); return False
 
-# --- МЕТРИКЕ ---
+# --- METRIKE ---
 def get_unique_clients_count_for_date(datum):
     conn = sqlite3.connect('termini.db'); c = conn.cursor()
     c.execute("""SELECT COUNT(DISTINCT ime || '|' || telefon || '|' || usluga) FROM rezervacije
@@ -208,7 +208,7 @@ def naplati_termin(rezervacija_id, payment_method):
     c.execute("UPDATE rezervacije SET status='naplacen', payment_method=? WHERE id=?", (payment_method, rezervacija_id))
     conn.commit(); conn.close()
 
-# --- КЛИЈЕНТСКИ ДЕО ---
+# --- KLIJENTSKI DEO ---
 def prikazi_usluge():
     conn = sqlite3.connect('termini.db'); c = conn.cursor()
     c.execute("SELECT usluga, cena, trajanje FROM cenovnik ORDER BY trajanje ASC")
@@ -251,37 +251,8 @@ def prikazi_slotove(datum):
                         if st.button(f"🟢 {termin}", key=f"slot_{termin}_{datum}", use_container_width=True):
                             st.session_state['izabrani_termin'] = termin; st.rerun()
 
-def admin_rucno_zakazi():
-    st.write("### ➕ Ručno zakazivanje")
-    with st.form(key="admin_zakazi_form"):
-        ime = st.text_input("Ime i prezime *"); telefon = st.text_input("Telefon *")
-        datum = st.date_input("Odaberi datum", value=datetime.now().date(), min_value=datetime.now().date())
-        conn = sqlite3.connect('termini.db'); c = conn.cursor()
-        c.execute("SELECT usluga, cena, trajanje FROM cenovnik ORDER BY trajanje ASC")
-        usluge = c.fetchall(); conn.close()
-        usluga_opcije = [f"{u[0]} ({u[2]} min, {u[1]} din)" for u in usluge]
-        izabrana = st.selectbox("Usluga", usluga_opcije)
-        idx = usluga_opcije.index(izabrana) if izabrana in usluga_opcije else 0
-        usluga_ime = usluge[idx][0]; usluga_cena = usluge[idx][1]; usluga_trajanje = usluge[idx][2]
-        conn = sqlite3.connect('termini.db'); c = conn.cursor()
-        c.execute("SELECT vreme, ime FROM rezervacije WHERE datum=? AND ime IS NULL ORDER BY vreme ASC", (datum,))
-        slobodni_slotovi = c.fetchall(); conn.close()
-        if not slobodni_slotovi: st.warning("Nema slobodnih termina."); return
-        vreme_opcije = [v[0] for v in slobodni_slotovi]
-        izabrano_vreme = st.selectbox("Termin", vreme_opcije)
-        potvrdi = st.form_submit_button("✅ Zakaži")
-        if potvrdi:
-            if ime and telefon and ime.strip() and telefon.strip():
-                slotovi = proveri_slotove_za_uslugu(datum, izabrano_vreme, usluga_trajanje)
-                if slotovi is None: st.error("❌ Nema dovoljno slobodnih termina.")
-                else:
-                    if rezervisi_slotove(datum, slotovi, ime, telefon, usluga_ime, usluga_cena, usluga_trajanje):
-                        st.success(f"✅ Uspešno zakazano!"); st.rerun()
-                    else: st.error("❌ Greška pri rezervaciji.")
-            else: st.warning("⚠️ Popunite ime i telefon.")
-
 # ============================================================
-# КАЛЕНДАР - ФИЛТЕР У PYTHON-У (БЕЗБЕДНА ВЕРЗИЈА)
+# KALENDAR - RADNA VERZIJA (FILTRIRANJE U PYTHON-U)
 # ============================================================
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled (30 min slotovi)")
@@ -291,7 +262,7 @@ def prikaz_nedeljnog_kalendara():
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
 
-    # --- 2. Zauzeti termini (BEZ filtera u SQL, filtriramo u Python-u) ---
+    # --- 2. Zauzeti termini (filtriramo naplaćene u Python-u) ---
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     placeholders = ','.join(['?'] * len(datumi))
@@ -303,7 +274,7 @@ def prikaz_nedeljnog_kalendara():
     zauzeti = c.fetchall()
     conn.close()
 
-    # Filtriraj naplaćene termine (status != 'naplacen')
+    # Filtriraj naplaćene termine
     zauzeti = [row for row in zauzeti if row[6] != 'naplacen']
 
     podaci_termina = {}
@@ -734,7 +705,7 @@ def prikaz_nedeljnog_kalendara():
             st.rerun()
 
 # ===================================================================
-# ГЛАВНИ ДЕО
+# GLAVNI DEO
 # ===================================================================
 init_db()
 
@@ -846,7 +817,9 @@ with tab2:
                     else: st.error("Nove lozinke se ne poklapaju ili su prazne")
                 else: st.error("Stara lozinka nije tačna")
 
-        #admin_rucno_zakazi()
+        # --- RUČNO ZAKAZIVANJE JE UKLONJENO ---
+        # admin_rucno_zakazi()  <-- OVA LINIJA JE UKLONJENA
+
         st.write("---")
         st.write("## 📅 Odaberite datum za pregled")
         admin_datumi = generisi_datume()
@@ -952,6 +925,6 @@ with tab2:
         else:
             st.info(f"Nema zakazanih klijenata za {formatiraj_datum(admin_datum)}.")
 
-        # ---- КАЛЕНДАР ----
+        # ---- KALENDAR ----
         st.write("---")
         prikaz_nedeljnog_kalendara()
