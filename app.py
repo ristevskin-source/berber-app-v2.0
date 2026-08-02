@@ -651,7 +651,7 @@ def prikaz_nedeljnog_kalendara():
         .kalendar-wrapper {{
             overflow-x: auto;
             overflow-y: auto;
-            max-height: 70vh;
+            max-height: 90vh;
             -webkit-overflow-scrolling: touch;
             margin: 10px 0;
             border: 1px solid #444;
