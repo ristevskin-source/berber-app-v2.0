@@ -686,8 +686,8 @@ def prikaz_nedeljnog_kalendara():
             position: sticky;
             left: 0;
             z-index: 5;
-            min-width: 60px;
-            max-width: 60px;
+            min-width: 45px;
+            max-width: 45px;
             white-space: nowrap;
         }}
         .slot-dugme {{
