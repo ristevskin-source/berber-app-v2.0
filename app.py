@@ -429,7 +429,7 @@ def admin_rucno_zakazi():
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled")
 
-    # --- 1. Generiši datume ---
+    # --- 1. Generiši datume (ponedeljak - nedelja) ---
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
@@ -451,7 +451,7 @@ def prikaz_nedeljnog_kalendara():
         datum, vreme, ime, telefon, usluga, cena = row
         podaci_termina[(datum, vreme)] = (ime, telefon, usluga, cena)
 
-    # --- 3. Generiši slotove ---
+    # --- 3. Generiši slotove (09:00 - 20:00) ---
     slotovi = []
     trenutno = datetime.strptime("09:00", "%H:%M")
     kraj = datetime.strptime("20:00", "%H:%M")
@@ -463,18 +463,18 @@ def prikaz_nedeljnog_kalendara():
         slotovi.append(vreme_str)
         trenutno += timedelta(minutes=15)
 
-    # --- 4. Kreiraj tabelu koristeći Streamlit kolone ---
-    # Zaglavlje
-    cols = st.columns([1] + [1]*7)
+    # --- 4. Prikaz zaglavlja (dani) ---
+    # Prva kolona za vreme, ostale za dane
+    cols = st.columns([1] + [1] * 7)
     with cols[0]:
         st.write("**Vreme**")
     for i, d in enumerate(datumi):
         with cols[i+1]:
             st.write(f"**{d.strftime('%a')}**\n{d.strftime('%d.%m.')}")
 
-    # Redovi
+    # --- 5. Prikaz svakog reda (slot) ---
     for slot in slotovi:
-        cols = st.columns([1] + [1]*7)
+        cols = st.columns([1] + [1] * 7)
         with cols[0]:
             st.write(slot)
 
@@ -484,8 +484,8 @@ def prikaz_nedeljnog_kalendara():
             with cols[i+1]:
                 if key in podaci_termina:
                     # Zauzeto - crveno dugme
-                    if st.button("", key=f"z_{datum_str}_{slot}", help="Zauzet termin"):
-                        ime, telefon, usluga, cena = podaci_termina[key]
+                    ime, telefon, usluga, cena = podaci_termina[key]
+                    if st.button("", key=f"z_{datum_str}_{slot}", help=f"Zauzeto: {ime} - {usluga}"):
                         st.session_state['kalendar_detalji'] = {
                             'tip': 'zauzet',
                             'datum': datum_str,
@@ -497,9 +497,9 @@ def prikaz_nedeljnog_kalendara():
                         }
                         st.rerun()
                     # CSS za crveno dugme
-                    st.markdown("""
+                    st.markdown(f"""
                         <style>
-                        div[data-testid="column"] button {
+                        div[data-testid="column"]:nth-child({i+2}) button {{
                             background-color: #c62828 !important;
                             color: white !important;
                             border: none !important;
@@ -509,10 +509,10 @@ def prikaz_nedeljnog_kalendara():
                             padding: 0 !important;
                             font-size: 0px !important;
                             min-width: 44px !important;
-                        }
-                        div[data-testid="column"] button:hover {
+                        }}
+                        div[data-testid="column"]:nth-child({i+2}) button:hover {{
                             background-color: #e53935 !important;
-                        }
+                        }}
                         </style>
                     """, unsafe_allow_html=True)
                 else:
@@ -524,9 +524,9 @@ def prikaz_nedeljnog_kalendara():
                             'vreme': slot
                         }
                         st.rerun()
-                    st.markdown("""
+                    st.markdown(f"""
                         <style>
-                        div[data-testid="column"] button {
+                        div[data-testid="column"]:nth-child({i+2}) button {{
                             background-color: #2e7d32 !important;
                             color: white !important;
                             border: none !important;
@@ -536,14 +536,14 @@ def prikaz_nedeljnog_kalendara():
                             padding: 0 !important;
                             font-size: 0px !important;
                             min-width: 44px !important;
-                        }
-                        div[data-testid="column"] button:hover {
+                        }}
+                        div[data-testid="column"]:nth-child({i+2}) button:hover {{
                             background-color: #43a047 !important;
-                        }
+                        }}
                         </style>
                     """, unsafe_allow_html=True)
 
-    # --- 5. Prikaz detalja ili forme ---
+    # --- 6. Prikaz detalja ili forme ---
     if 'kalendar_detalji' in st.session_state:
         detalji = st.session_state['kalendar_detalji']
         st.divider()
@@ -559,6 +559,7 @@ def prikaz_nedeljnog_kalendara():
                 st.write(f"**Cena:** {detalji['cena']} din")
             st.write(f"**Datum:** {detalji['datum']}  **Vreme:** {detalji['vreme']}")
 
+            # Akcije (KORAK 3 - biće dodato kasnije)
             if st.button("✖️ Zatvori"):
                 del st.session_state['kalendar_detalji']
                 st.rerun()
