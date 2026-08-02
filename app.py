@@ -429,7 +429,7 @@ def admin_rucno_zakazi():
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled (30 min slotovi)")
 
-    # --- 1. Generiši datume ---
+    # --- 1. Generiši datume za tekuću nedelju ---
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
@@ -451,7 +451,7 @@ def prikaz_nedeljnog_kalendara():
         datum, vreme, ime, telefon, usluga, cena = row
         podaci_termina[(datum, vreme)] = (ime, telefon, usluga, cena)
 
-    # --- 3. Generiši slotove na 30 min ---
+    # --- 3. Generiši slotove na 30 min (09:00 - 20:00) ---
     slotovi = []
     trenutno = datetime.strptime("09:00", "%H:%M")
     kraj = datetime.strptime("20:00", "%H:%M")
@@ -463,57 +463,47 @@ def prikaz_nedeljnog_kalendara():
         slotovi.append(vreme_str)
         trenutno += timedelta(minutes=30)
 
-    # --- 4. Pripremi HTML ---
+    # --- 4. Pripremi HTML sa JavaScript funkcijom ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
 
-    # JavaScript funkcija za klik - postavlja query parametre
-    js_klik = """
-    <script>
-        function klikniSlot(tip, datum, vreme) {
-            window.location.search = '?akcija=klik&tip=' + tip + '&datum=' + datum + '&vreme=' + vreme;
-        }
-    </script>
-    """
-
-    # Početak tabele
-    html = js_klik + """
+    html = f"""
     <style>
-        .kalendar-wrapper {
+        .kalendar-wrapper {{
             overflow-x: auto;
             overflow-y: auto;
-            max-height: 75vh;
+            max-height: 80vh;
             -webkit-overflow-scrolling: touch;
             margin: 10px 0;
             border: 1px solid #444;
             border-radius: 8px;
             background-color: #1e1e1e;
             padding: 4px;
-        }
-        .kalendar-tabela {
+        }}
+        .kalendar-tabela {{
             border-collapse: collapse;
             width: 100%;
             min-width: 700px;
             font-size: 13px;
             color: white;
             table-layout: fixed;
-        }
-        .kalendar-tabela th, .kalendar-tabela td {
+        }}
+        .kalendar-tabela th, .kalendar-tabela td {{
             padding: 2px 2px;
             text-align: center;
             border-bottom: 1px solid #333;
             border-right: 1px solid #333;
             vertical-align: middle;
-        }
-        .kalendar-tabela th {
+        }}
+        .kalendar-tabela th {{
             background-color: #2b2b2b;
             color: #d4af37;
             font-weight: bold;
             position: sticky;
             top: 0;
             z-index: 10;
-        }
-        .vreme-kolona {
+        }}
+        .vreme-kolona {{
             background-color: #2b2b2b;
             font-weight: bold;
             color: #aaa;
@@ -525,13 +515,13 @@ def prikaz_nedeljnog_kalendara():
             max-width: 55px;
             white-space: nowrap;
             padding: 2px 4px !important;
-        }
-        .dan-kolona {
+        }}
+        .dan-kolona {{
             width: 80px;
             min-width: 80px;
             max-width: 80px;
-        }
-        .slot-dugme {
+        }}
+        .slot-dugme {{
             display: inline-block;
             width: 44px;
             height: 44px;
@@ -542,56 +532,39 @@ def prikaz_nedeljnog_kalendara():
             padding: 0;
             margin: 0 auto;
             transition: transform 0.1s;
-        }
-        .slot-dugme:active {
+        }}
+        .slot-dugme:active {{
             transform: scale(0.92);
-        }
-        .slot-slobodan {
+        }}
+        .slot-slobodan {{
             background-color: #2e7d32;
-        }
-        .slot-slobodan:hover {
+        }}
+        .slot-slobodan:hover {{
             background-color: #43a047;
-        }
-        .slot-zauzet {
+        }}
+        .slot-zauzet {{
             background-color: #c62828;
-        }
-        .slot-zauzet:hover {
+        }}
+        .slot-zauzet:hover {{
             background-color: #e53935;
-        }
-        .kalendar-wrapper::-webkit-scrollbar {
+        }}
+        .kalendar-wrapper::-webkit-scrollbar {{
             height: 6px;
             width: 6px;
-        }
-        .kalendar-wrapper::-webkit-scrollbar-track {
+        }}
+        .kalendar-wrapper::-webkit-scrollbar-track {{
             background: #2b2b2b;
-        }
-        .kalendar-wrapper::-webkit-scrollbar-thumb {
+        }}
+        .kalendar-wrapper::-webkit-scrollbar-thumb {{
             background: #d4af37;
             border-radius: 3px;
-        }
-        /* mobilni prilagodjeni stilovi */
-        @media (max-width: 600px) {
-            .dan-kolona {
-                width: 60px;
-                min-width: 60px;
-                max-width: 60px;
-            }
-            .slot-dugme {
-                width: 36px;
-                height: 36px;
-            }
-            .vreme-kolona {
-                width: 45px;
-                min-width: 45px;
-                max-width: 45px;
-                font-size: 11px;
-            }
-            .kalendar-tabela {
-                min-width: 500px;
-                font-size: 11px;
-            }
-        }
+        }}
     </style>
+    <script>
+        function klikniSlot(tip, datum, vreme) {{
+            window.location.search = '?akcija=klik&tip=' + tip + '&datum=' + datum + '&vreme=' + vreme;
+        }}
+    </script>
     <div class="kalendar-wrapper">
     <table class="kalendar-tabela">
         <thead>
@@ -633,9 +606,6 @@ def prikaz_nedeljnog_kalendara():
         </tbody>
     </table>
     </div>
-    <div style="text-align:center; color:#666; font-size:12px; margin-top:4px;">
-        🔴 Zauzeto &nbsp;&nbsp; 🟢 Slobodno
-    </div>
     """
 
     # Prikaz tabele
@@ -656,7 +626,7 @@ def prikaz_nedeljnog_kalendara():
             st.query_params.clear()
             st.rerun()
 
-    # --- 6. Prikaz detalja/forme ---
+    # --- 6. Prikaz detalja ili forme ---
     if 'kalendar_klik' in st.session_state and st.session_state['kalendar_klik'] is not None:
         klik = st.session_state['kalendar_klik']
         tip = klik['tip']
