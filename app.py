@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime, timedelta
 import streamlit.components.v1 as components
 
-# --- Стилизација ---
+# --- STILIZACIJA ---
 st.markdown("""
 <style>
 .stApp { background-color: #1e1e1e; color: white; }
@@ -22,7 +22,7 @@ div[data-testid="stMetric"] [data-testid="stMetricLabel"] { color: white !import
 </style>
 """, unsafe_allow_html=True)
 
-# --- База ---
+# --- BAZA ---
 def init_db():
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
@@ -59,7 +59,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# --- Слотови ---
+# --- SLOTOVI ---
 def generisi_slotove_za_dan(datum):
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
@@ -80,7 +80,7 @@ def generisi_slotove_za_dan(datum):
     conn.commit()
     conn.close()
 
-# --- Помоћне ---
+# --- POMOĆNE ---
 def formatiraj_datum(datum):
     return datum.strftime("%d.%m.%Y.")
 
@@ -92,7 +92,7 @@ def osvezi_termine():
     for datum in generisi_datume():
         generisi_slotove_za_dan(datum)
 
-# --- Резервације ---
+# --- REZERVACIJE ---
 def proveri_slotove_za_uslugu(datum, vreme, trajanje):
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
@@ -134,7 +134,7 @@ def rezervisi_slotove(datum, slotovi, ime, telefon, usluga_ime, usluga_cena, usl
         return True
     except Exception as e: st.error(e); return False
 
-# --- Метрике ---
+# --- METRIKE ---
 def get_unique_clients_count_for_date(datum):
     conn = sqlite3.connect('termini.db'); c = conn.cursor()
     c.execute("""SELECT COUNT(DISTINCT ime || '|' || telefon || '|' || usluga) FROM rezervacije
@@ -208,7 +208,7 @@ def naplati_termin(rezervacija_id, payment_method):
     c.execute("UPDATE rezervacije SET status='naplacen', payment_method=? WHERE id=?", (payment_method, rezervacija_id))
     conn.commit(); conn.close()
 
-# --- Клијентски део ---
+# --- KLIJENTSKI DEO ---
 def prikazi_usluge():
     conn = sqlite3.connect('termini.db'); c = conn.cursor()
     c.execute("SELECT usluga, cena, trajanje FROM cenovnik ORDER BY trajanje ASC")
@@ -252,31 +252,39 @@ def prikazi_slotove(datum):
                             st.session_state['izabrani_termin'] = termin; st.rerun()
 
 # ============================================================
-# КАЛЕНДАР - РАДНА ВЕРЗИЈА (БЕЗ ФИЛТЕРА)
+# KALENDAR - SA ZAŠTITOM OD PETLJE
 # ============================================================
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled (30 min slotovi)")
+
+    # --- ZAŠTITA OD BESKONAČNE PETLJE ---
+    if 'kalendar_obrađeno' in st.session_state and st.session_state['kalendar_obrađeno']:
+        st.session_state['kalendar_obrađeno'] = False
+        return
 
     # --- 1. Datumi ---
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
 
-    # --- 2. Zauzeti termini (BEZ FILTERA) ---
+    # --- 2. Zauzeti termini (filtriramo naplaćene u Python-u) ---
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     placeholders = ','.join(['?'] * len(datumi))
     c.execute(f"""
-        SELECT datum, vreme, ime, telefon, usluga, cena, id FROM rezervacije
+        SELECT datum, vreme, ime, telefon, usluga, cena, status, id FROM rezervacije
         WHERE datum IN ({placeholders})
         AND ime IS NOT NULL
     """, [d.strftime('%Y-%m-%d') for d in datumi])
     zauzeti = c.fetchall()
     conn.close()
 
+    # Filtriraj naplaćene termine
+    zauzeti = [row for row in zauzeti if row[6] != 'naplacen']
+
     podaci_termina = {}
     for row in zauzeti:
-        datum, vreme, ime, telefon, usluga, cena, id = row
+        datum, vreme, ime, telefon, usluga, cena, status, id = row
         podaci_termina[(datum, vreme)] = (ime, telefon, usluga, cena, id)
 
     # --- 3. Slotovi ---
@@ -302,7 +310,7 @@ def prikaz_nedeljnog_kalendara():
     for u in usluge:
         usluge_opcije.append(f"{u[0]}||{u[1]}||{u[2]}")
 
-    # --- 5. HTML + JavaScript (RADNA VERZIJA) ---
+    # --- 5. HTML + JavaScript ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
 
@@ -671,10 +679,12 @@ def prikaz_nedeljnog_kalendara():
             else:
                 if rezervisi_slotove(datum, slotovi_za_uslugu, ime, telefon, usluga, cena_int, trajanje_int):
                     st.success("✅ Termin uspešno zakazan!")
+                    st.session_state['kalendar_obrađeno'] = False
                     st.query_params.clear()
                     st.rerun()
                 else:
                     st.error("❌ Greška pri rezervaciji.")
+        st.session_state['kalendar_obrađeno'] = False
         st.query_params.clear()
 
     if query_params.get("akcija") == "obrisi":
@@ -686,8 +696,11 @@ def prikaz_nedeljnog_kalendara():
             conn.commit()
             conn.close()
             st.success("🗑️ Termin obrisan!")
+            st.session_state['kalendar_obrađeno'] = False
             st.query_params.clear()
             st.rerun()
+        st.session_state['kalendar_obrađeno'] = False
+        st.query_params.clear()
 
     if query_params.get("akcija") == "naplati":
         termin_id = query_params.get("id")
@@ -698,11 +711,17 @@ def prikaz_nedeljnog_kalendara():
             conn.commit()
             conn.close()
             st.success("💰 Termin naplaćen!")
+            st.session_state['kalendar_obrađeno'] = False
             st.query_params.clear()
             st.rerun()
+        st.session_state['kalendar_obrađeno'] = False
+        st.query_params.clear()
+
+    # Na kraju funkcije
+    st.session_state['kalendar_obrađeno'] = True
 
 # ===================================================================
-# ГЛАВНИ ДЕО
+# GLAVNI DEO
 # ===================================================================
 init_db()
 
@@ -713,7 +732,7 @@ if 'admin_authenticated' not in st.session_state: st.session_state['admin_authen
 if 'admin_password' not in st.session_state: st.session_state['admin_password'] = 'admin123'
 if 'naplata_id' not in st.session_state: st.session_state['naplata_id'] = None
 if 'admin_selected_date' not in st.session_state: st.session_state['admin_selected_date'] = datetime.now().date()
-if 'kalendar_klik' not in st.session_state: st.session_state['kalendar_klik'] = None
+if 'kalendar_obrađeno' not in st.session_state: st.session_state['kalendar_obrađeno'] = False
 
 tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
 
@@ -814,9 +833,6 @@ with tab2:
                     else: st.error("Nove lozinke se ne poklapaju ili su prazne")
                 else: st.error("Stara lozinka nije tačna")
 
-        # --- RUČNO ZAKAZIVANJE UKLONJENO ---
-        # admin_rucno_zakazi()  # Ova linija je uklonjena
-
         st.write("---")
         st.write("## 📅 Odaberite datum za pregled")
         admin_datumi = generisi_datume()
@@ -856,7 +872,8 @@ with tab2:
             FROM rezervacije WHERE datum=? AND ime IS NOT NULL ORDER BY vreme ASC""", (admin_datum,))
         rows = c.fetchall()
         conn.close()
-        # BEZ FILTERA - prikazuju se svi termini (uključujući i naplaćene)
+        # Filtriraj naplaćene termine
+        rows = [row for row in rows if row[6] != 'naplacen']
         if rows:
             grupe = {}
             for id, vreme, ime, telefon, usluga, cena, status, payment_method in rows:
@@ -921,6 +938,6 @@ with tab2:
         else:
             st.info(f"Nema zakazanih klijenata za {formatiraj_datum(admin_datum)}.")
 
-        # ---- КАЛЕНДАР ----
+        # ---- KALENDAR ----
         st.write("---")
         prikaz_nedeljnog_kalendara()
