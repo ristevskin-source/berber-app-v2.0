@@ -429,12 +429,12 @@ def admin_rucno_zakazi():
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled (30 min slotovi)")
 
-    # --- 1. Generiši datume za tekuću nedelju ---
+    # 1. Generiši datume za tekuću nedelju
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
 
-    # --- 2. Dohvati zauzete termine ---
+    # 2. Dohvati zauzete termine
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     placeholders = ','.join(['?'] * len(datumi))
@@ -451,7 +451,7 @@ def prikaz_nedeljnog_kalendara():
         datum, vreme, ime, telefon, usluga, cena = row
         podaci_termina[(datum, vreme)] = (ime, telefon, usluga, cena)
 
-    # --- 3. Generiši slotove na 30 min (09:00 - 20:00) ---
+    # 3. Generiši slotove na 30 min (09:00 - 20:00)
     slotovi = []
     trenutno = datetime.strptime("09:00", "%H:%M")
     kraj = datetime.strptime("20:00", "%H:%M")
@@ -463,11 +463,11 @@ def prikaz_nedeljnog_kalendara():
         slotovi.append(vreme_str)
         trenutno += timedelta(minutes=30)
 
-    # --- 4. Pripremi podatke za HTML ---
+    # 4. Pripremi podatke za HTML
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
 
-    # --- 5. Generiši HTML sa CSS i JavaScript ---
+    # 5. Generiši HTML sa CSS i JavaScript
     html = f"""
     <style>
         .kalendar-wrapper {{
@@ -606,7 +606,6 @@ def prikaz_nedeljnog_kalendara():
     </table>
     </div>
     <script>
-        // Ako postoji query parametar, skroluj na tabelu
         if (window.location.search.includes('akcija=klik')) {
             document.querySelector('.kalendar-wrapper').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -616,7 +615,7 @@ def prikaz_nedeljnog_kalendara():
     # Prikaz HTML-a
     st.markdown(html, unsafe_allow_html=True)
 
-    # --- 6. Obrada klikova preko query parametara ---
+    # 6. Obrada klikova preko query parametara
     query_params = st.query_params
     if query_params.get("akcija") == "klik":
         datum = query_params.get("datum")
@@ -631,7 +630,7 @@ def prikaz_nedeljnog_kalendara():
             st.query_params.clear()
             st.rerun()
 
-    # --- 7. Prikaz detalja ili forme ---
+    # 7. Prikaz detalja ili forme
     if 'kalendar_klik' in st.session_state and st.session_state['kalendar_klik']:
         klik = st.session_state['kalendar_klik']
         tip = klik['tip']
