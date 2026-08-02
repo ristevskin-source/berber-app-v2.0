@@ -427,141 +427,32 @@ def admin_rucno_zakazi():
 # KALENDAR - SAMO PRIKAZ (BEZ AKCIJA)
 # ============================================================
 def prikaz_nedeljnog_kalendara():
-    st.write("### 📅 Kalendar (privremeno isključen)")
+    st.subheader("📅 Nedeljni pregled (test)")
+    st.write("Ovo je test verzija kalendara.")
     
+    # Generiši datume
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
-
-    conn = sqlite3.connect('termini.db')
-    c = conn.cursor()
-    placeholders = ','.join(['?'] * len(datumi))
-    c.execute(f"""
-        SELECT datum, vreme, ime FROM rezervacije
-        WHERE datum IN ({placeholders})
-        AND ime IS NOT NULL
-    """, [d.strftime('%Y-%m-%d') for d in datumi])
-    zauzeti = c.fetchall()
-    conn.close()
-    zauzeti_set = set((row[0], row[1]) for row in zauzeti)
-
-    slotovi = []
-    trenutno = datetime.strptime("09:00", "%H:%M")
-    kraj = datetime.strptime("20:00", "%H:%M")
-    while trenutno < kraj:
-        vreme_str = trenutno.strftime("%H:%M")
-        if "12:00" <= vreme_str < "13:00":
-            trenutno += timedelta(minutes=15)
+    
+    # Prikaži datume
+    cols = st.columns([1] + [2]*7)
+    with cols[0]:
+        st.write("**Vreme**")
+    for i, d in enumerate(datumi):
+        with cols[i+1]:
+            st.write(f"**{d.strftime('%a')}**")
+    
+    # Prikaži nekoliko slotova
+    for hour in range(9, 20):
+        if hour == 12:
             continue
-        slotovi.append(vreme_str)
-        trenutno += timedelta(minutes=15)
-
-    dani_oznake = [d.strftime("%a %d.") for d in datumi]
-    dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
-
-    html = f"""
-    <style>
-        .kalendar-wrapper {{
-            overflow-x: auto;
-            overflow-y: auto;
-            max-height: 90vh;
-            -webkit-overflow-scrolling: touch;
-            margin: 10px 0;
-            border: 1px solid #444;
-            border-radius: 8px;
-            background-color: #1e1e1e;
-        }}
-        .kalendar-tabela {{
-            border-collapse: collapse;
-            width: 100%;
-            min-width: 600px;
-            font-size: 14px;
-            color: white;
-        }}
-        .kalendar-tabela th, .kalendar-tabela td {{
-            padding: 4px 2px;
-            text-align: center;
-            border-bottom: 1px solid #333;
-            border-right: 1px solid #333;
-        }}
-        .kalendar-tabela th {{
-            background-color: #2b2b2b;
-            color: #d4af37;
-            font-weight: bold;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }}
-        .vreme-kolona {{
-            background-color: #2b2b2b;
-            font-weight: bold;
-            color: #aaa;
-            position: sticky;
-            left: 0;
-            z-index: 5;
-            min-width: 45px;
-            max-width: 45px;
-            white-space: nowrap;
-            padding: 2px 2px !important;
-        }}
-        .slot-dugme {{
-            display: inline-block;
-            width: 44px;
-            height: 44px;
-            border-radius: 6px;
-            border: none;
-            font-size: 0px;
-            padding: 0;
-            margin: 0 auto;
-        }}
-        .slot-slobodan {{
-            background-color: #2e7d32;
-        }}
-        .slot-zauzet {{
-            background-color: #c62828;
-        }}
-        .dan-kolona {{
-            min-width: 64px;
-        }}
-        .kalendar-wrapper::-webkit-scrollbar {{
-            height: 6px;
-            width: 6px;
-        }}
-        .kalendar-wrapper::-webkit-scrollbar-track {{
-            background: #2b2b2b;
-        }}
-        .kalendar-wrapper::-webkit-scrollbar-thumb {{
-            background: #d4af37;
-            border-radius: 3px;
-        }}
-    </style>
-    <div class="kalendar-wrapper">
-    <table class="kalendar-tabela">
-        <thead>
-            <tr>
-                <th class="vreme-kolona">Vreme</th>
-    """
-    for oznaka in dani_oznake:
-        html += f"<th class='dan-kolona'>{oznaka}</th>"
-    html += """
-            </tr>
-        </thead>
-        <tbody>
-    """
-    for slot in slotovi:
-        html += f"<tr><td class='vreme-kolona'>{slot}</td>"
-        for i, datum in enumerate(dani_vrednosti):
-            if (datum, slot) in zauzeti_set:
-                html += f"<td class='dan-kolona'><div class='slot-dugme slot-zauzet'></div></td>"
-            else:
-                html += f"<td class='dan-kolona'><div class='slot-dugme slot-slobodan'></div></td>"
-        html += "</tr>"
-    html += """
-        </tbody>
-    </table>
-    </div>
-    """
-    components.html(html, height=600, scrolling=False)
+        cols = st.columns([1] + [2]*7)
+        with cols[0]:
+            st.write(f"{hour:02d}:00")
+        for i in range(7):
+            with cols[i+1]:
+                st.button("⬜", key=f"test_{hour}_{i}")
 
 # ===================================================================
 # GLAVNI DEO
