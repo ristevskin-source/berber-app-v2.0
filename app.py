@@ -1,6 +1,7 @@
 import streamlit as st
 import sqlite3
 from datetime import datetime, timedelta
+import streamlit.components.v1 as components  # DODATO za HTML tabelu
 
 # --- PODEŠAVANJE STRANICE ---
 # --- STILIZACIJA IZGLEDA ---
@@ -595,6 +596,209 @@ def admin_rucno_zakazi():
             else:
                 st.warning("⚠️ Popunite ime i telefon.")
 
+# ============================================================
+# NOVA FUNKCIJA ZA NEDELJNI KALENDAR (KORAK 1)
+# ============================================================
+def prikaz_nedeljnog_kalendara():
+    """
+    Prikaz nedeljne tabele sa slotovima.
+    - Fiksirana leva kolona (vreme)
+    - Horizontalni skrol za dane
+    - Vertikalni skrol za sve slotove
+    - Dugmad su kvadratna, klikabilna (za sada bez akcije)
+    """
+    st.subheader("📅 Nedeljni pregled")
+
+    # 1. Generiši datume za tekuću nedelju (ponedeljak - nedelja)
+    danas = datetime.now().date()
+    pocetak_nedelje = danas - timedelta(days=danas.weekday())
+    datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
+
+    # 2. Dohvati sve zauzete termine iz baze za te datume
+    conn = sqlite3.connect('termini.db')
+    c = conn.cursor()
+    placeholders = ','.join(['?'] * len(datumi))
+    c.execute(f"""
+        SELECT datum, vreme, ime FROM rezervacije
+        WHERE datum IN ({placeholders})
+        AND ime IS NOT NULL
+    """, [d.strftime('%Y-%m-%d') for d in datumi])
+    zauzeti = c.fetchall()
+    conn.close()
+
+    # 3. Napravi set zauzetih (datum, vreme)
+    zauzeti_set = set((row[0], row[1]) for row in zauzeti)
+
+    # 4. Generiši sve slotove od 09:00 do 20:00 (bez pauze 12-13h)
+    slotovi = []
+    trenutno = datetime.strptime("09:00", "%H:%M")
+    kraj = datetime.strptime("20:00", "%H:%M")
+    while trenutno < kraj:
+        vreme_str = trenutno.strftime("%H:%M")
+        if "12:00" <= vreme_str < "13:00":
+            trenutno += timedelta(minutes=15)
+            continue
+        slotovi.append(vreme_str)
+        trenutno += timedelta(minutes=15)
+
+    # 5. Pripremi podatke za HTML tabelu
+    dani_oznake = [d.strftime("%a %d.") for d in datumi]  # npr. "Pon 27."
+    dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
+
+    # 6. Generiši HTML sa CSS za mobilni prikaz
+    html = f"""
+    <style>
+        .kalendar-wrapper {{
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 70vh;
+            -webkit-overflow-scrolling: touch;
+            margin: 10px 0;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background-color: #1e1e1e;
+        }}
+        .kalendar-tabela {{
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 600px;
+            font-size: 14px;
+            color: white;
+        }}
+        .kalendar-tabela th, .kalendar-tabela td {{
+            padding: 4px 2px;
+            text-align: center;
+            border-bottom: 1px solid #333;
+            border-right: 1px solid #333;
+        }}
+        .kalendar-tabela th {{
+            background-color: #2b2b2b;
+            color: #d4af37;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }}
+        .vreme-kolona {{
+            background-color: #2b2b2b;
+            font-weight: bold;
+            color: #aaa;
+            position: sticky;
+            left: 0;
+            z-index: 5;
+            min-width: 60px;
+            max-width: 60px;
+            white-space: nowrap;
+        }}
+        .slot-dugme {{
+            display: inline-block;
+            width: 44px;
+            height: 44px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0px;
+            padding: 0;
+            margin: 0 auto;
+            transition: transform 0.1s;
+        }}
+        .slot-dugme:active {{
+            transform: scale(0.92);
+        }}
+        .slot-slobodan {{
+            background-color: #2e7d32;
+        }}
+        .slot-slobodan:hover {{
+            background-color: #43a047;
+        }}
+        .slot-zauzet {{
+            background-color: #c62828;
+        }}
+        .slot-zauzet:hover {{
+            background-color: #e53935;
+        }}
+        .slot-pauza {{
+            background-color: #666;
+            color: #aaa;
+            font-size: 12px;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            margin: 0 auto;
+        }}
+        /* Za mobilni: kolone za dane su šire od vremenske */
+        .dan-kolona {{
+            min-width: 64px;
+        }}
+        /* Skrol traka */
+        .kalendar-wrapper::-webkit-scrollbar {{
+            height: 6px;
+            width: 6px;
+        }}
+        .kalendar-wrapper::-webkit-scrollbar-track {{
+            background: #2b2b2b;
+        }}
+        .kalendar-wrapper::-webkit-scrollbar-thumb {{
+            background: #d4af37;
+            border-radius: 3px;
+        }}
+    </style>
+    <div class="kalendar-wrapper">
+    <table class="kalendar-tabela">
+        <thead>
+            <tr>
+                <th class="vreme-kolona">Vreme</th>
+    """
+    # Dodaj zaglavlja za dane
+    for oznaka in dani_oznake:
+        html += f"<th class='dan-kolona'>{oznaka}</th>"
+    html += """
+            </tr>
+        </thead>
+        <tbody>
+    """
+
+    # Redovi za svaki slot
+    for slot in slotovi:
+        html += f"<tr><td class='vreme-kolona'>{slot}</td>"
+        for i, datum in enumerate(dani_vrednosti):
+            if (datum, slot) in zauzeti_set:
+                # Zauzeto - crveno dugme (za sada bez akcije)
+                html += f"""
+                    <td class='dan-kolona'>
+                        <button class='slot-dugme slot-zauzet' 
+                                id='z_{datum}_{slot}' 
+                                onclick='alert("Zauzet slot")'>
+                        </button>
+                    </td>
+                """
+            else:
+                # Slobodno - zeleno dugme (za sada bez akcije)
+                html += f"""
+                    <td class='dan-kolona'>
+                        <button class='slot-dugme slot-slobodan' 
+                                id='s_{datum}_{slot}' 
+                                onclick='alert("Slobodan slot")'>
+                        </button>
+                    </td>
+                """
+        html += "</tr>"
+
+    html += """
+        </tbody>
+    </table>
+    </div>
+    """
+
+    # 7. Prikaži HTML u Streamlit-u
+    components.html(html, height=600, scrolling=False)
+
+    # Dodatno obaveštenje (privremeno)
+    st.caption("ℹ️ Dugmad su trenutno samo vizuelna (bez akcije). Klik prikazuje alert.")
+
 # ===================================================================
 # GLAVNI DEO APLIKACIJE
 # ===================================================================
@@ -927,3 +1131,7 @@ with tab2:
                     st.markdown("---")
         else:
             st.info(f"Nema zakazanih klijenata za {formatiraj_datum(admin_datum)}.")
+
+        # ---- KORAK 1: Nedeljni kalendar ----
+        st.write("---")
+        prikaz_nedeljnog_kalendara()
