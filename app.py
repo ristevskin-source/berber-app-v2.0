@@ -327,20 +327,17 @@ def prikaz_nedeljnog_kalendara():
     usluge = c.fetchall()
     conn.close()
 
-    # Kreiraj opcije za dropdown
     usluge_opcije = []
     for u in usluge:
-        usluge_opcije.append(f"{u[0]}||{u[1]}||{u[2]}")  # ime||cena||trajanje
+        usluge_opcije.append(f"{u[0]}||{u[1]}||{u[2]}")
 
-    # --- 5. Generiši HTML tabelu sa popup-om i formom ---
+    # --- 5. Generiši HTML tabelu sa popup-om ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
 
-    # Kreiraj JavaScript za popup sa formom
     js_popup = f"""
     <script>
-    function otvoriPopup(tip, datum, vreme, ime, telefon, usluga, cena) {{
-        // Kreiraj overlay
+    function otvoriPopup(tip, datum, vreme, ime, telefon, usluga, cena, id) {{
         var overlay = document.createElement('div');
         overlay.id = 'popup-overlay';
         overlay.style.cssText = `
@@ -355,7 +352,6 @@ def prikaz_nedeljnog_kalendara():
             animation: fadeIn 0.3s;
         `;
         
-        // Kreiraj popup prozor
         var popup = document.createElement('div');
         popup.style.cssText = `
             background: #2b2b2b;
@@ -375,7 +371,6 @@ def prikaz_nedeljnog_kalendara():
         var sadrzaj = '';
         
         if (tip === 'zauzet') {{
-            // Detalji klijenta
             sadrzaj = `
                 <h3 style="color: #d4af37; margin-top: 0;">👤 Detalji klijenta</h3>
                 <hr style="border-color: #444;">
@@ -389,7 +384,7 @@ def prikaz_nedeljnog_kalendara():
                     <button onclick="zatvoriPopup()" style="
                         flex: 1;
                         padding: 10px;
-                        background: #c62828;
+                        background: #666;
                         color: white;
                         border: none;
                         border-radius: 8px;
@@ -397,32 +392,9 @@ def prikaz_nedeljnog_kalendara():
                         font-size: 16px;
                         min-width: 80px;
                     ">✖️ Zatvori</button>
-                    <button onclick="window.location.href='?akcija=obrisi&id=${{id}}'" style="
-                        flex: 1;
-                        padding: 10px;
-                        background: #e65100;
-                        color: white;
-                        border: none;
-                        border-radius: 8px;
-                        cursor: pointer;
-                        font-size: 16px;
-                        min-width: 80px;
-                    ">🗑️ Obriši</button>
-                    <button onclick="window.location.href='?akcija=naplati&id=${{id}}'" style="
-                        flex: 1;
-                        padding: 10px;
-                        background: #2e7d32;
-                        color: white;
-                        border: none;
-                        border-radius: 8px;
-                        cursor: pointer;
-                        font-size: 16px;
-                        min-width: 80px;
-                    ">💰 Naplati</button>
                 </div>
             `;
         }} else {{
-            // Forma za novi termin (zeleno dugme)
             sadrzaj = `
                 <h3 style="color: #d4af37; margin-top: 0;">📝 Novi termin</h3>
                 <hr style="border-color: #444;">
@@ -467,13 +439,9 @@ def prikaz_nedeljnog_kalendara():
                             box-sizing: border-box;
                         ">
     """
-    # Dodaj opcije za usluge
     for u in usluge_opcije:
         dijelovi = u.split('||')
-        ime_usl = dijelovi[0]
-        cena_usl = dijelovi[1]
-        trajanje_usl = dijelovi[2]
-        js_popup += f"<option value='{ime_usl}||{cena_usl}||{trajanje_usl}'>{ime_usl} ({trajanje_usl} min, {cena_usl} din)</option>"
+        js_popup += f"<option value='{u}'>{dijelovi[0]} ({dijelovi[2]} min, {dijelovi[1]} din)</option>"
     
     js_popup += f"""
                         </select>
@@ -511,7 +479,6 @@ def prikaz_nedeljnog_kalendara():
         overlay.appendChild(popup);
         document.body.appendChild(overlay);
         
-        // Dodaj CSS animacije
         var style = document.createElement('style');
         style.textContent = `
             @keyframes fadeIn {{
@@ -537,13 +504,11 @@ def prikaz_nedeljnog_kalendara():
             return;
         }}
         
-        // Parsiraj uslugu
         var dijelovi = uslugaValue.split('||');
         var uslugaIme = dijelovi[0];
         var uslugaCena = dijelovi[1];
         var uslugaTrajanje = dijelovi[2];
         
-        // Pošalji podatke preko URL-a
         window.location.href = `?akcija=zakazi&datum=${{datum}}&vreme=${{vreme}}&ime=${{encodeURIComponent(ime)}}&telefon=${{encodeURIComponent(telefon)}}&usluga=${{encodeURIComponent(uslugaIme)}}&cena=${{uslugaCena}}&trajanje=${{uslugaTrajanje}}`;
     }}
     
@@ -556,7 +521,6 @@ def prikaz_nedeljnog_kalendara():
     </script>
     """
 
-    # HTML tabela
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -691,10 +655,8 @@ def prikaz_nedeljnog_kalendara():
 
     components.html(html, height=600, scrolling=False)
 
-    # --- 6. Obrada akcija iz popup-a ---
+    # --- 6. Obrada akcije za zakazivanje ---
     query_params = st.query_params
-
-    # Akcija: Zakazivanje novog termina
     if query_params.get("akcija") == "zakazi":
         datum = query_params.get("datum")
         vreme = query_params.get("vreme")
@@ -717,32 +679,6 @@ def prikaz_nedeljnog_kalendara():
                 else:
                     st.error("❌ Greška pri rezervaciji.")
         st.query_params.clear()
-
-    # Akcija: Brisanje termina
-    if query_params.get("akcija") == "obrisi":
-        termin_id = query_params.get("id")
-        if termin_id:
-            conn = sqlite3.connect('termini.db')
-            c = conn.cursor()
-            c.execute("DELETE FROM rezervacije WHERE id=?", (termin_id,))
-            conn.commit()
-            conn.close()
-            st.success("🗑️ Termin obrisan!")
-            st.query_params.clear()
-            st.rerun()
-
-    # Akcija: Naplata termina
-    if query_params.get("akcija") == "naplati":
-        termin_id = query_params.get("id")
-        if termin_id:
-            conn = sqlite3.connect('termini.db')
-            c = conn.cursor()
-            c.execute("UPDATE rezervacije SET status='naplacen', payment_method='Keš' WHERE id=?", (termin_id,))
-            conn.commit()
-            conn.close()
-            st.success("💰 Termin naplaćen!")
-            st.query_params.clear()
-            st.rerun()
 
 # ===================================================================
 # GLAVNI DEO
