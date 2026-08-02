@@ -597,7 +597,7 @@ def admin_rucno_zakazi():
                 st.warning("⚠️ Popunite ime i telefon.")
 
 # ============================================================
-# NOVA FUNKCIJA ZA NEDELJNI KALENDAR (KORAK 2)
+# NOVA FUNKCIJA ZA NEDELJNI KALENDAR (KORAK 2 - SA AKCIJAMA)
 # ============================================================
 def prikaz_nedeljnog_kalendara():
     """
@@ -607,7 +607,16 @@ def prikaz_nedeljnog_kalendara():
     """
     st.subheader("📅 Nedeljni pregled")
 
-    # --- 1. Provera query parametara (da li je neko dugme kliknuto) ---
+    # --- 1. Provera session_state - ako postoji neispravan unos, obriši ga ---
+    if 'kalendar_klik' in st.session_state:
+        if not isinstance(st.session_state['kalendar_klik'], dict) or \
+           'tip' not in st.session_state['kalendar_klik'] or \
+           'datum' not in st.session_state['kalendar_klik'] or \
+           'vreme' not in st.session_state['kalendar_klik']:
+            # Ako nije ispravno, obriši
+            del st.session_state['kalendar_klik']
+
+    # --- 2. Provera query parametara (da li je neko dugme kliknuto) ---
     query_params = st.query_params
     akcija = query_params.get("akcija")
     datum_klik = query_params.get("datum")
@@ -626,12 +635,12 @@ def prikaz_nedeljnog_kalendara():
         st.query_params.clear()
         st.rerun()
 
-    # --- 2. Generiši datume za tekuću nedelju (ponedeljak - nedelja) ---
+    # --- 3. Generiši datume za tekuću nedelju ---
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
 
-    # --- 3. Dohvati sve zauzete termine iz baze ---
+    # --- 4. Dohvati sve zauzete termine iz baze ---
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     placeholders = ','.join(['?'] * len(datumi))
@@ -649,7 +658,7 @@ def prikaz_nedeljnog_kalendara():
         datum, vreme, ime, telefon, usluga, cena = row
         podaci_termina[(datum, vreme)] = (ime, telefon, usluga, cena)
 
-    # --- 4. Generiši slotove od 09:00 do 20:00 (bez pauze 12-13h) ---
+    # --- 5. Generiši slotove (09:00 - 20:00, bez pauze) ---
     slotovi = []
     trenutno = datetime.strptime("09:00", "%H:%M")
     kraj = datetime.strptime("20:00", "%H:%M")
@@ -661,11 +670,11 @@ def prikaz_nedeljnog_kalendara():
         slotovi.append(vreme_str)
         trenutno += timedelta(minutes=15)
 
-    # --- 5. Pripremi podatke za HTML tabelu ---
+    # --- 6. Pripremi podatke za HTML tabelu ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
 
-    # --- 6. Generiši HTML + JavaScript ---
+    # --- 7. Generiši HTML + JavaScript ---
     html = f"""
     <style>
         .kalendar-wrapper {{
@@ -806,9 +815,17 @@ def prikaz_nedeljnog_kalendara():
     # Prikaz HTML tabele
     components.html(html, height=600, scrolling=False)
 
-    # --- 7. Obrada klikova (prikaz detalja ili forme) na osnovu session_state ---
+    # --- 8. Obrada klikova (prikaz detalja ili forme) na osnovu session_state ---
+    # Ponovo proveri da li je session_state ispravan (možda je postavljen nakon rerun-a)
     if 'kalendar_klik' in st.session_state:
         klik = st.session_state['kalendar_klik']
+        # Dodatna sigurnosna provera
+        if not isinstance(klik, dict) or 'tip' not in klik or 'datum' not in klik or 'vreme' not in klik:
+            # Ako nije ispravan, obriši i izađi
+            del st.session_state['kalendar_klik']
+            st.rerun()
+            return
+
         tip = klik['tip']
         datum = klik['datum']
         vreme = klik['vreme']
@@ -834,6 +851,9 @@ def prikaz_nedeljnog_kalendara():
                     st.rerun()
             else:
                 st.warning("Podaci za ovaj termin nisu pronađeni.")
+                # Obriši session_state da ne bi ponovo prikazivali grešku
+                del st.session_state['kalendar_klik']
+                st.rerun()
 
         elif tip == 'slobodan':
             # Forma za novi termin
@@ -903,10 +923,11 @@ if 'naplata_id' not in st.session_state:
     st.session_state['naplata_id'] = None
 if 'admin_selected_date' not in st.session_state:
     st.session_state['admin_selected_date'] = datetime.now().date()
+# Dodato za kalendar
 if 'kalendar_klik' not in st.session_state:
     st.session_state['kalendar_klik'] = None
 
-# Logo (komentarisano da ne bi pravilo grešku ako fajl ne postoji)
+# Logo - zakomentarisano jer fajl ne postoji na serveru
 # st.image("IMG-c75b1bbded411581450ad9e3374dbc68-V.jpg", width=300)
 
 # Tabovi
@@ -1217,6 +1238,6 @@ with tab2:
         else:
             st.info(f"Nema zakazanih klijenata za {formatiraj_datum(admin_datum)}.")
 
-        # ---- KORAK 2: Nedeljni kalendar sa interakcijom ----
+        # ---- KORAK 2: Nedeljni kalendar sa akcijama ----
         st.write("---")
         prikaz_nedeljnog_kalendara()
