@@ -427,7 +427,7 @@ def admin_rucno_zakazi():
 # KALENDAR - SAMO PRIKAZ (BEZ AKCIJA)
 # ============================================================
 def prikaz_nedeljnog_kalendara():
-    st.subheader("📅 Nedeljni pregled")
+    st.write("### 📅 Kalendar (privremeno isključen)")
     
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
