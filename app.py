@@ -331,7 +331,7 @@ def prikaz_nedeljnog_kalendara():
     for u in usluge:
         usluge_opcije.append(f"{u[0]}||{u[1]}||{u[2]}")
 
-    # --- 5. Generiši HTML tabelu sa popup-om ---
+    # --- 5. Generiši HTML tabelu sa popup-om (SVE VITIČASTE ZAGRADE SU DUPLIRANE) ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
 
