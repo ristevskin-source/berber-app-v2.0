@@ -57,6 +57,15 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {
 div[data-testid="stMetric"] [data-testid="stMetricLabel"] {
     color: white !important;
 }
+/* Poboljšanje za radio dugmad */
+.stRadio > label {
+    color: white !important;
+}
+.stRadio > div {
+    background-color: #2b2b2b;
+    border-radius: 10px;
+    padding: 10px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -424,7 +433,7 @@ def admin_rucno_zakazi():
                 st.warning("⚠️ Popunite ime i telefon.")
 
 # ============================================================
-# KALENDAR FUNKCIJA (KORAK 3 - SA AKCIJAMA)
+# KALENDAR (PUNI KOD SA AKCIJAMA)
 # ============================================================
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled (30 min slotovi)")
@@ -463,9 +472,12 @@ def prikaz_nedeljnog_kalendara():
         slotovi.append(vreme_str)
         trenutno += timedelta(minutes=30)
 
-    # --- 4. Generiši HTML tabelu sa linkovima ---
+    # --- 4. Generiši HTML tabelu ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
+
+    # Generiši URL sa parametrima za povratak na Admin Panel
+    base_url = "?navigacija=Admin+Panel"  # dodatni parametar
 
     html = f"""
     <!DOCTYPE html>
@@ -609,7 +621,7 @@ def prikaz_nedeljnog_kalendara():
             if (datum, slot) in podaci_termina:
                 html += f"""
                     <td class='dan-kolona'>
-                        <a href='?akcija=klik&tip=zauzet&datum={datum}&vreme={slot}' 
+                        <a href='?akcija=klik&tip=zauzet&datum={datum}&vreme={slot}&navigacija=Admin+Panel' 
                            class='slot-link slot-zauzet'>
                         </a>
                     </td>
@@ -617,7 +629,7 @@ def prikaz_nedeljnog_kalendara():
             else:
                 html += f"""
                     <td class='dan-kolona'>
-                        <a href='?akcija=klik&tip=slobodan&datum={datum}&vreme={slot}' 
+                        <a href='?akcija=klik&tip=slobodan&datum={datum}&vreme={slot}&navigacija=Admin+Panel' 
                            class='slot-link slot-slobodan'>
                         </a>
                     </td>
@@ -633,7 +645,7 @@ def prikaz_nedeljnog_kalendara():
 
     components.html(html, height=600, scrolling=False)
 
-    # --- 5. Obrada klikova (čuvanje u session_state) ---
+    # --- 5. Obrada klikova ---
     query_params = st.query_params
     if query_params.get("akcija") == "klik":
         datum = query_params.get("datum")
@@ -645,10 +657,11 @@ def prikaz_nedeljnog_kalendara():
                 'datum': datum,
                 'vreme': vreme
             }
+            # Očisti query parametre, ali zadrži navigaciju
             st.query_params.clear()
             st.rerun()
 
-    # --- 6. Prikaz detalja sa akcijama (samo ako smo u admin tabu) ---
+    # --- 6. Prikaz detalja sa akcijama ---
     if 'kalendar_klik' in st.session_state and st.session_state['kalendar_klik']:
         klik = st.session_state['kalendar_klik']
         tip = klik['tip']
@@ -682,7 +695,7 @@ def prikaz_nedeljnog_kalendara():
                         conn.commit()
                         conn.close()
                         st.success("Termin obrisan!")
-                        st.session_state['kalendar_klik'] = None
+                        del st.session_state['kalendar_klik']
                         st.rerun()
 
                 with col_akcije[1]:
@@ -719,7 +732,7 @@ def prikaz_nedeljnog_kalendara():
                                 st.success(f"✅ Naplaćeno ({payment_choice})")
                                 st.session_state['naplata_prikaz'] = False
                                 st.session_state['naplata_termin_id'] = None
-                                st.session_state['kalendar_klik'] = None
+                                del st.session_state['kalendar_klik']
                                 st.rerun()
                         with col_odustani:
                             if st.button("❌ Odustani", key=f"odustani_naplata_{termin_id}"):
@@ -762,7 +775,7 @@ def prikaz_nedeljnog_kalendara():
                                 st.success("✅ Usluga izmenjena!")
                                 st.session_state['izmena_prikaz'] = False
                                 st.session_state['izmena_termin_id'] = None
-                                st.session_state['kalendar_klik'] = None
+                                del st.session_state['kalendar_klik']
                                 st.rerun()
                         with col_odustani:
                             if st.button("❌ Odustani", key=f"odustani_izmena_{termin_id}"):
@@ -784,7 +797,6 @@ def prikaz_nedeljnog_kalendara():
                                 novo_vreme_str = novo_vreme.strftime("%H:%M")
                                 conn = sqlite3.connect('termini.db')
                                 c = conn.cursor()
-                                # Proveri da li je novo vreme slobodno
                                 c.execute("SELECT ime FROM rezervacije WHERE datum=? AND vreme=? AND ime IS NOT NULL", (novi_datum_str, novo_vreme_str))
                                 if c.fetchone():
                                     st.error("❌ Izabrani termin je već zauzet!")
@@ -795,7 +807,7 @@ def prikaz_nedeljnog_kalendara():
                                     st.success("✅ Termin prezakazan!")
                                     st.session_state['prezakazi_prikaz'] = False
                                     st.session_state['prezakazi_termin_id'] = None
-                                    st.session_state['kalendar_klik'] = None
+                                    del st.session_state['kalendar_klik']
                                     st.rerun()
                         with col_odustani:
                             if st.button("❌ Odustani", key=f"odustani_prezakazi_{termin_id}"):
@@ -867,6 +879,7 @@ def prikaz_nedeljnog_kalendara():
 # ===================================================================
 init_db()
 
+# Inicijalizacija session_state
 if 'izabrana_usluga' not in st.session_state:
     st.session_state['izabrana_usluga'] = None
 if 'izabrani_termin' not in st.session_state:
@@ -881,14 +894,33 @@ if 'naplata_id' not in st.session_state:
     st.session_state['naplata_id'] = None
 if 'admin_selected_date' not in st.session_state:
     st.session_state['admin_selected_date'] = datetime.now().date()
+if 'kalendar_klik' not in st.session_state:
+    st.session_state['kalendar_klik'] = None
+if 'naplata_prikaz' not in st.session_state:
+    st.session_state['naplata_prikaz'] = False
+if 'naplata_termin_id' not in st.session_state:
+    st.session_state['naplata_termin_id'] = None
+if 'izmena_prikaz' not in st.session_state:
+    st.session_state['izmena_prikaz'] = False
+if 'izmena_termin_id' not in st.session_state:
+    st.session_state['izmena_termin_id'] = None
+if 'prezakazi_prikaz' not in st.session_state:
+    st.session_state['prezakazi_prikaz'] = False
+if 'prezakazi_termin_id' not in st.session_state:
+    st.session_state['prezakazi_termin_id'] = None
 
-# Logo je zakomentarisan jer fajl ne postoji
-# st.image("IMG-c75b1bbded411581450ad9e3374dbc68-V.jpg", width=300)
+# --- Navigacija pomoću radio dugmadi ---
+navigacija = st.radio(
+    "Izaberite opciju:",
+    ["📅 Zakazivanje", "🔑 Admin Panel"],
+    key="navigacija",
+    horizontal=True,
+    label_visibility="collapsed"
+)
 
-tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
-
-# --- TAB 1 ---
-with tab1:
+# --- Prikaz odabranog dela ---
+if navigacija == "📅 Zakazivanje":
+    # KLIJENTSKI DEO
     if 'izabrana_usluga' in st.session_state and not isinstance(st.session_state['izabrana_usluga'], (dict, type(None))):
         st.session_state['izabrana_usluga'] = None
 
@@ -965,8 +997,7 @@ with tab1:
         else:
             st.error("❌ Nema dostupnih datuma.")
 
-# --- TAB 2 ---
-with tab2:
+else:  # ADMIN PANEL
     if not st.session_state['admin_authenticated']:
         st.write("### 🔐 Admin pristup")
         password = st.text_input("Unesite lozinku", type="password")
