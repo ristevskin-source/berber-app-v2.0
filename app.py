@@ -429,7 +429,7 @@ def admin_rucno_zakazi():
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled (30 min slotovi)")
 
-    # --- 1. Generiši datume za tekuću nedelju ---
+    # --- 1. Generiši datume ---
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
@@ -451,7 +451,7 @@ def prikaz_nedeljnog_kalendara():
         datum, vreme, ime, telefon, usluga, cena = row
         podaci_termina[(datum, vreme)] = (ime, telefon, usluga, cena)
 
-    # --- 3. Generiši slotove na 30 min (09:00 - 20:00) ---
+    # --- 3. Generiši slotove na 30 min ---
     slotovi = []
     trenutno = datetime.strptime("09:00", "%H:%M")
     kraj = datetime.strptime("20:00", "%H:%M")
@@ -463,11 +463,15 @@ def prikaz_nedeljnog_kalendara():
         slotovi.append(vreme_str)
         trenutno += timedelta(minutes=30)
 
-    # --- 4. Pripremi HTML sa JavaScript funkcijom ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
 
+    # --- 4. HTML sa JavaScript funkcijom ---
     html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         .kalendar-wrapper {{
             overflow-x: auto;
@@ -562,9 +566,11 @@ def prikaz_nedeljnog_kalendara():
     </style>
     <script>
         function klikniSlot(tip, datum, vreme) {{
-            window.location.search = '?akcija=klik&tip=' + tip + '&datum=' + datum + '&vreme=' + vreme;
+            window.location.search = `?akcija=klik&tip=${{tip}}&datum=${{datum}}&vreme=${{vreme}}`;
         }}
     </script>
+    </head>
+    <body>
     <div class="kalendar-wrapper">
     <table class="kalendar-tabela">
         <thead>
@@ -581,9 +587,8 @@ def prikaz_nedeljnog_kalendara():
 
     for slot in slotovi:
         html += f"<tr><td class='vreme-kolona'>{slot}</td>"
-        for i, datum in enumerate(dani_vrednosti):
+        for datum in dani_vrednosti:
             if (datum, slot) in podaci_termina:
-                # Zauzeto
                 html += f"""
                     <td class='dan-kolona'>
                         <button class='slot-dugme slot-zauzet' 
@@ -592,7 +597,6 @@ def prikaz_nedeljnog_kalendara():
                     </td>
                 """
             else:
-                # Slobodno
                 html += f"""
                     <td class='dan-kolona'>
                         <button class='slot-dugme slot-slobodan' 
@@ -606,9 +610,10 @@ def prikaz_nedeljnog_kalendara():
         </tbody>
     </table>
     </div>
+    </body>
+    </html>
     """
 
-    # Prikaz tabele
     st.markdown(html, unsafe_allow_html=True)
 
     # --- 5. Obrada query parametara ---
