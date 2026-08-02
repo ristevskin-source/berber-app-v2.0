@@ -846,7 +846,7 @@ with tab2:
                     else: st.error("Nove lozinke se ne poklapaju ili su prazne")
                 else: st.error("Stara lozinka nije tačna")
 
-        admin_rucno_zakazi()
+        #admin_rucno_zakazi()
         st.write("---")
         st.write("## 📅 Odaberite datum za pregled")
         admin_datumi = generisi_datume()
