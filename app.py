@@ -680,7 +680,7 @@ def prikaz_nedeljnog_kalendara():
 
     components.html(html, height=600, scrolling=False)
 
-    # --- 6. Obrada akcija iz popup-a ---
+    # --- 6. Obrada akcija iz popup-a (POPRAVLJENO) ---
     query_params = st.query_params
 
     if query_params.get("akcija") == "zakazi":
@@ -700,7 +700,11 @@ def prikaz_nedeljnog_kalendara():
             else:
                 if rezervisi_slotove(datum, slotovi_za_uslugu, ime, telefon, usluga, cena_int, trajanje_int):
                     st.success("✅ Termin uspešno zakazan!")
+                    # Očisti query i osveži
                     st.query_params.clear()
+                    # Resetuj session_state za kalendar da bi se tabela osvežila
+                    if 'kalendar_klik' in st.session_state:
+                        del st.session_state['kalendar_klik']
                     st.rerun()
                 else:
                     st.error("❌ Greška pri rezervaciji.")
@@ -716,6 +720,9 @@ def prikaz_nedeljnog_kalendara():
             conn.close()
             st.success("🗑️ Termin obrisan!")
             st.query_params.clear()
+            # Resetuj session_state
+            if 'kalendar_klik' in st.session_state:
+                del st.session_state['kalendar_klik']
             st.rerun()
 
     if query_params.get("akcija") == "naplati":
@@ -728,8 +735,10 @@ def prikaz_nedeljnog_kalendara():
             conn.close()
             st.success("💰 Termin naplaćen!")
             st.query_params.clear()
+            # Resetuj session_state
+            if 'kalendar_klik' in st.session_state:
+                del st.session_state['kalendar_klik']
             st.rerun()
-
 # ===================================================================
 # GLAVNI DEO
 # ===================================================================
