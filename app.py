@@ -114,7 +114,7 @@ def generisi_slotove_za_dan(datum):
     while trenutno < kraj:
         if trenutno >= datetime.strptime(f"{datum} 12:00", "%Y-%m-%d %H:%M") and \
            trenutno < datetime.strptime(f"{datum} 13:00", "%Y-%m-%d %H:%M"):
-            trenutno += timedelta(minutes=30)
+            trenutno += timedelta(minutes=15)
             continue
         vreme = trenutno.strftime("%H:%M")
         c.execute("SELECT * FROM rezervacije WHERE datum=? AND vreme=?", (datum, vreme))
@@ -123,7 +123,7 @@ def generisi_slotove_za_dan(datum):
                 (usluga, datum, vreme, ime, telefon, cena, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (None, datum, vreme, None, None, None, 'zakazan'))
-        trenutno += timedelta(minutes=30)
+        trenutno += timedelta(minutes=15)
     conn.commit()
     conn.close()
 
@@ -153,7 +153,7 @@ def proveri_slotove_za_uslugu(datum, vreme, trajanje):
             break
     if start is None:
         return None
-    broj = trajanje // 30  # sada 30 minuta
+    broj = trajanje // 15
     if start + broj > len(svi):
         return None
     potrebni = []
@@ -165,7 +165,7 @@ def proveri_slotove_za_uslugu(datum, vreme, trajanje):
         if prethodno:
             t1 = datetime.strptime(prethodno, "%H:%M")
             t2 = datetime.strptime(slot_vreme, "%H:%M")
-            if (t2 - t1).seconds // 60 != 30:
+            if (t2 - t1).seconds // 60 != 15:
                 return None
         potrebni.append(slot_vreme)
         prethodno = slot_vreme
@@ -424,77 +424,65 @@ def admin_rucno_zakazi():
                 st.warning("⚠️ Popunite ime i telefon.")
 
 # ============================================================
-# KALENDAR (KORAK 2 - HTML TABELA SA KLIKOVIMA)
+# FUNKCIJA ZA KALENDAR (KORAK 1 - SAMO PRIKAZ, BEZ AKCIJA)
 # ============================================================
 def prikaz_nedeljnog_kalendara():
-    st.subheader("📅 Nedeljni pregled (30 min slotovi)")
-
-    # --- 1. Generiši datume za tekuću nedelju ---
+    st.subheader("📅 Nedeljni pregled")
+    
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
 
-    # --- 2. Dohvati zauzete termine ---
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     placeholders = ','.join(['?'] * len(datumi))
     c.execute(f"""
-        SELECT datum, vreme, ime, telefon, usluga, cena FROM rezervacije
+        SELECT datum, vreme, ime FROM rezervacije
         WHERE datum IN ({placeholders})
         AND ime IS NOT NULL
     """, [d.strftime('%Y-%m-%d') for d in datumi])
     zauzeti = c.fetchall()
     conn.close()
+    zauzeti_set = set((row[0], row[1]) for row in zauzeti)
 
-    podaci_termina = {}
-    for row in zauzeti:
-        datum, vreme, ime, telefon, usluga, cena = row
-        podaci_termina[(datum, vreme)] = (ime, telefon, usluga, cena)
-
-    # --- 3. Generiši slotove na 30 min (09:00 - 20:00) ---
     slotovi = []
     trenutno = datetime.strptime("09:00", "%H:%M")
     kraj = datetime.strptime("20:00", "%H:%M")
     while trenutno < kraj:
         vreme_str = trenutno.strftime("%H:%M")
         if "12:00" <= vreme_str < "13:00":
-            trenutno += timedelta(minutes=30)
+            trenutno += timedelta(minutes=15)
             continue
         slotovi.append(vreme_str)
-        trenutno += timedelta(minutes=30)
+        trenutno += timedelta(minutes=15)
 
-    # --- 4. Pripremi podatke za HTML ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
 
-    # --- 5. Generiši HTML sa CSS i JavaScript ---
     html = f"""
     <style>
         .kalendar-wrapper {{
             overflow-x: auto;
             overflow-y: auto;
-            max-height: 80vh;
+            max-height: 90vh;
             -webkit-overflow-scrolling: touch;
             margin: 10px 0;
             border: 1px solid #444;
             border-radius: 8px;
             background-color: #1e1e1e;
-            padding: 4px;
         }}
         .kalendar-tabela {{
             border-collapse: collapse;
             width: 100%;
-            min-width: 700px;
-            font-size: 13px;
+            min-width: 600px;
+            font-size: 14px;
             color: white;
-            table-layout: fixed;
         }}
         .kalendar-tabela th, .kalendar-tabela td {{
-            padding: 2px 2px;
+            padding: 4px 2px;
             text-align: center;
             border-bottom: 1px solid #333;
             border-right: 1px solid #333;
-            vertical-align: middle;
         }}
         .kalendar-tabela th {{
             background-color: #2b2b2b;
@@ -511,16 +499,10 @@ def prikaz_nedeljnog_kalendara():
             position: sticky;
             left: 0;
             z-index: 5;
-            width: 55px;
-            min-width: 55px;
-            max-width: 55px;
+            min-width: 45px;
+            max-width: 45px;
             white-space: nowrap;
-            padding: 2px 4px !important;
-        }}
-        .dan-kolona {{
-            width: 80px;
-            min-width: 80px;
-            max-width: 80px;
+            padding: 2px 2px !important;
         }}
         .slot-dugme {{
             display: inline-block;
@@ -528,26 +510,18 @@ def prikaz_nedeljnog_kalendara():
             height: 44px;
             border-radius: 6px;
             border: none;
-            cursor: pointer;
             font-size: 0px;
             padding: 0;
             margin: 0 auto;
-            transition: transform 0.1s;
-        }}
-        .slot-dugme:active {{
-            transform: scale(0.92);
         }}
         .slot-slobodan {{
             background-color: #2e7d32;
         }}
-        .slot-slobodan:hover {{
-            background-color: #43a047;
-        }}
         .slot-zauzet {{
             background-color: #c62828;
         }}
-        .slot-zauzet:hover {{
-            background-color: #e53935;
+        .dan-kolona {{
+            min-width: 64px;
         }}
         .kalendar-wrapper::-webkit-scrollbar {{
             height: 6px;
@@ -561,11 +535,6 @@ def prikaz_nedeljnog_kalendara():
             border-radius: 3px;
         }}
     </style>
-    <script>
-        function klikniSlot(tip, datum, vreme) {{
-            window.location.search = `?akcija=klik&tip=${{tip}}&datum=${{datum}}&vreme=${{vreme}}`;
-        }}
-    </script>
     <div class="kalendar-wrapper">
     <table class="kalendar-tabela">
         <thead>
@@ -579,135 +548,20 @@ def prikaz_nedeljnog_kalendara():
         </thead>
         <tbody>
     """
-
     for slot in slotovi:
         html += f"<tr><td class='vreme-kolona'>{slot}</td>"
         for i, datum in enumerate(dani_vrednosti):
-            if (datum, slot) in podaci_termina:
-                html += f"""
-                    <td class='dan-kolona'>
-                        <button class='slot-dugme slot-zauzet' 
-                                onclick="klikniSlot('zauzet','{datum}','{slot}')">
-                        </button>
-                    </td>
-                """
+            if (datum, slot) in zauzeti_set:
+                html += f"<td class='dan-kolona'><div class='slot-dugme slot-zauzet'></div></td>"
             else:
-                html += f"""
-                    <td class='dan-kolona'>
-                        <button class='slot-dugme slot-slobodan' 
-                                onclick="klikniSlot('slobodan','{datum}','{slot}')">
-                        </button>
-                    </td>
-                """
+                html += f"<td class='dan-kolona'><div class='slot-dugme slot-slobodan'></div></td>"
         html += "</tr>"
-
     html += """
         </tbody>
     </table>
     </div>
-    <script>
-        // Ako postoji query parametar, skroluj na tabelu
-        if (window.location.search.includes('akcija=klik')) {
-            document.querySelector('.kalendar-wrapper').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    </script>
     """
-
-    # Prikaz HTML-a
-    st.markdown(html, unsafe_allow_html=True)
-
-    # --- 6. Obrada klikova preko query parametara (bez beskonačne petlje) ---
-    # Proveri da li već postoji session_state za klik
-    if 'kalendar_klik' not in st.session_state:
-        st.session_state['kalendar_klik'] = None
-
-    # Pročitaj query parametre samo ako session_state nije već postavljen
-    if st.session_state['kalendar_klik'] is None:
-        query_params = st.query_params
-        if query_params.get("akcija") == "klik":
-            datum = query_params.get("datum")
-            vreme = query_params.get("vreme")
-            tip = query_params.get("tip")
-            if datum and vreme and tip:
-                st.session_state['kalendar_klik'] = {
-                    'tip': tip,
-                    'datum': datum,
-                    'vreme': vreme
-                }
-                st.query_params.clear()
-                st.rerun()
-
-    # --- 7. Prikaz detalja ili forme (ako session_state nije None) ---
-    if st.session_state['kalendar_klik'] is not None:
-        klik = st.session_state['kalendar_klik']
-        tip = klik['tip']
-        datum = klik['datum']
-        vreme = klik['vreme']
-
-        if tip == 'zauzet':
-            if (datum, vreme) in podaci_termina:
-                ime, telefon, usluga, cena = podaci_termina[(datum, vreme)]
-                st.divider()
-                st.subheader("👤 Detalji klijenta")
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write(f"**Ime:** {ime}")
-                    st.write(f"**Telefon:** {telefon}")
-                with col2:
-                    st.write(f"**Usluga:** {usluga}")
-                    st.write(f"**Cena:** {cena} din")
-                st.write(f"**Datum:** {datum}  **Vreme:** {vreme}")
-
-                if st.button("✖️ Zatvori detalje"):
-                    st.session_state['kalendar_klik'] = None
-                    st.rerun()
-            else:
-                st.warning("Podaci nisu pronađeni.")
-                st.session_state['kalendar_klik'] = None
-                st.rerun()
-
-        elif tip == 'slobodan':
-            st.divider()
-            st.subheader("📝 Novi termin")
-            st.write(f"**Datum:** {datum}  **Vreme:** {vreme}")
-
-            with st.form(key="novi_termin_kalendar"):
-                ime = st.text_input("Ime i prezime *")
-                telefon = st.text_input("Telefon *")
-
-                conn = sqlite3.connect('termini.db')
-                c = conn.cursor()
-                c.execute("SELECT usluga, cena, trajanje FROM cenovnik ORDER BY trajanje ASC")
-                usluge = c.fetchall()
-                conn.close()
-
-                usluga_opcije = [f"{u[0]} ({u[2]} min, {u[1]} din)" for u in usluge]
-                izabrana = st.selectbox("Usluga", usluga_opcije)
-                idx = usluga_opcije.index(izabrana) if izabrana in usluga_opcije else 0
-                usluga_ime = usluge[idx][0]
-                usluga_cena = usluge[idx][1]
-                usluga_trajanje = usluge[idx][2]
-
-                potvrdi = st.form_submit_button("✅ Zakaži")
-
-                if potvrdi:
-                    if ime and telefon and ime.strip() and telefon.strip():
-                        slotovi_za_uslugu = proveri_slotove_za_uslugu(datum, vreme, usluga_trajanje)
-                        if slotovi_za_uslugu is None:
-                            st.error("❌ Nema dovoljno slobodnih termina.")
-                        else:
-                            if rezervisi_slotove(datum, slotovi_za_uslugu, ime, telefon, usluga_ime, usluga_cena, usluga_trajanje):
-                                st.success("✅ Termin uspešno zakazan!")
-                                st.session_state['kalendar_klik'] = None
-                                st.rerun()
-                            else:
-                                st.error("❌ Greška pri rezervaciji.")
-                    else:
-                        st.warning("⚠️ Popunite ime i telefon.")
-
-            if st.button("✖️ Odustani"):
-                st.session_state['kalendar_klik'] = None
-                st.rerun()
+    components.html(html, height=600, scrolling=False)
 
 # ===================================================================
 # GLAVNI DEO
@@ -728,8 +582,6 @@ if 'naplata_id' not in st.session_state:
     st.session_state['naplata_id'] = None
 if 'admin_selected_date' not in st.session_state:
     st.session_state['admin_selected_date'] = datetime.now().date()
-if 'kalendar_klik' not in st.session_state:
-    st.session_state['kalendar_klik'] = None
 
 # Logo je zakomentarisan jer fajl ne postoji
 # st.image("IMG-c75b1bbded411581450ad9e3374dbc68-V.jpg", width=300)
