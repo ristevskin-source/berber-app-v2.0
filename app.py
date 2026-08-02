@@ -331,7 +331,7 @@ def prikaz_nedeljnog_kalendara():
     for u in usluge:
         usluge_opcije.append(f"{u[0]}||{u[1]}||{u[2]}")
 
-    # --- 5. Generiši HTML tabelu sa popup-om (SVE VITIČASTE ZAGRADE SU DUPLIRANE) ---
+    # --- 5. Generiši HTML tabelu sa popup-om ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
 
@@ -483,7 +483,7 @@ def prikaz_nedeljnog_kalendara():
                             font-size: 16px;
                             min-width: 80px;
                         ">✖️ Odustani</button>
-                        <button type="button" onclick="zakaziTermin('{datum}','{vreme}')" style="
+                        <button type="button" onclick="zakaziTermin('${{datum}}','${{vreme}}')" style="
                             flex: 1;
                             padding: 10px;
                             background: #d4af37;
