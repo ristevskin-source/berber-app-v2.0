@@ -429,12 +429,12 @@ def admin_rucno_zakazi():
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled")
 
-    # 1. Generiši datume
+    # --- 1. Generiši datume ---
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
 
-    # 2. Dohvati zauzete termine
+    # --- 2. Dohvati zauzete termine ---
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     placeholders = ','.join(['?'] * len(datumi))
@@ -451,7 +451,7 @@ def prikaz_nedeljnog_kalendara():
         datum, vreme, ime, telefon, usluga, cena = row
         podaci_termina[(datum, vreme)] = (ime, telefon, usluga, cena)
 
-    # 3. Generiši slotove
+    # --- 3. Generiši slotove ---
     slotovi = []
     trenutno = datetime.strptime("09:00", "%H:%M")
     kraj = datetime.strptime("20:00", "%H:%M")
@@ -463,35 +463,8 @@ def prikaz_nedeljnog_kalendara():
         slotovi.append(vreme_str)
         trenutno += timedelta(minutes=15)
 
-    # 4. Stil za dugmad (preko CSS-a)
-    st.markdown("""
-        <style>
-        .slot-btn {
-            width: 44px !important;
-            height: 44px !important;
-            border-radius: 6px !important;
-            border: none !important;
-            padding: 0 !important;
-            margin: 0 auto !important;
-            display: block !important;
-            font-size: 0px !important;
-        }
-        .slot-zauzet {
-            background-color: #c62828 !important;
-        }
-        .slot-zauzet:hover {
-            background-color: #e53935 !important;
-        }
-        .slot-slobodan {
-            background-color: #2e7d32 !important;
-        }
-        .slot-slobodan:hover {
-            background-color: #43a047 !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    # 5. Prikaz zaglavlja
+    # --- 4. Kreiraj tabelu koristeći Streamlit kolone ---
+    # Zaglavlje
     cols = st.columns([1] + [1]*7)
     with cols[0]:
         st.write("**Vreme**")
@@ -499,7 +472,7 @@ def prikaz_nedeljnog_kalendara():
         with cols[i+1]:
             st.write(f"**{d.strftime('%a')}**\n{d.strftime('%d.%m.')}")
 
-    # 6. Prikaz redova sa dugmadima
+    # Redovi
     for slot in slotovi:
         cols = st.columns([1] + [1]*7)
         with cols[0]:
@@ -511,10 +484,7 @@ def prikaz_nedeljnog_kalendara():
             with cols[i+1]:
                 if key in podaci_termina:
                     # Zauzeto - crveno dugme
-                    if st.button("", key=f"z_{datum_str}_{slot}", 
-                                help="Zauzet termin", 
-                                use_container_width=True):
-                        # Klik na crveno - prikaz detalja
+                    if st.button("", key=f"z_{datum_str}_{slot}", help="Zauzet termin"):
                         ime, telefon, usluga, cena = podaci_termina[key]
                         st.session_state['kalendar_detalji'] = {
                             'tip': 'zauzet',
@@ -526,25 +496,28 @@ def prikaz_nedeljnog_kalendara():
                             'cena': cena
                         }
                         st.rerun()
-                    # Dodaj CSS klasu za boju
+                    # CSS za crveno dugme
                     st.markdown("""
-                        <script>
-                        (function() {
-                            var btns = document.querySelectorAll('button[kind="secondary"]');
-                            btns.forEach(function(btn) {
-                                if (btn.innerText === '') {
-                                    btn.classList.add('slot-btn', 'slot-zauzet');
-                                }
-                            });
-                        })();
-                        </script>
+                        <style>
+                        div[data-testid="column"] button {
+                            background-color: #c62828 !important;
+                            color: white !important;
+                            border: none !important;
+                            width: 44px !important;
+                            height: 44px !important;
+                            border-radius: 6px !important;
+                            padding: 0 !important;
+                            font-size: 0px !important;
+                            min-width: 44px !important;
+                        }
+                        div[data-testid="column"] button:hover {
+                            background-color: #e53935 !important;
+                        }
+                        </style>
                     """, unsafe_allow_html=True)
                 else:
                     # Slobodno - zeleno dugme
-                    if st.button("", key=f"s_{datum_str}_{slot}", 
-                                help="Slobodan termin",
-                                use_container_width=True):
-                        # Klik na zeleno - forma za novi termin
+                    if st.button("", key=f"s_{datum_str}_{slot}", help="Slobodan termin"):
                         st.session_state['kalendar_detalji'] = {
                             'tip': 'slobodan',
                             'datum': datum_str,
@@ -552,19 +525,25 @@ def prikaz_nedeljnog_kalendara():
                         }
                         st.rerun()
                     st.markdown("""
-                        <script>
-                        (function() {
-                            var btns = document.querySelectorAll('button[kind="secondary"]');
-                            btns.forEach(function(btn) {
-                                if (btn.innerText === '') {
-                                    btn.classList.add('slot-btn', 'slot-slobodan');
-                                }
-                            });
-                        })();
-                        </script>
+                        <style>
+                        div[data-testid="column"] button {
+                            background-color: #2e7d32 !important;
+                            color: white !important;
+                            border: none !important;
+                            width: 44px !important;
+                            height: 44px !important;
+                            border-radius: 6px !important;
+                            padding: 0 !important;
+                            font-size: 0px !important;
+                            min-width: 44px !important;
+                        }
+                        div[data-testid="column"] button:hover {
+                            background-color: #43a047 !important;
+                        }
+                        </style>
                     """, unsafe_allow_html=True)
 
-    # 7. Prikaz detalja ili forme na osnovu session_state
+    # --- 5. Prikaz detalja ili forme ---
     if 'kalendar_detalji' in st.session_state:
         detalji = st.session_state['kalendar_detalji']
         st.divider()
@@ -580,7 +559,7 @@ def prikaz_nedeljnog_kalendara():
                 st.write(f"**Cena:** {detalji['cena']} din")
             st.write(f"**Datum:** {detalji['datum']}  **Vreme:** {detalji['vreme']}")
 
-            if st.button("✖️ Zatvori detalje"):
+            if st.button("✖️ Zatvori"):
                 del st.session_state['kalendar_detalji']
                 st.rerun()
 
