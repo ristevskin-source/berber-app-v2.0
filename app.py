@@ -681,6 +681,7 @@ def prikaz_nedeljnog_kalendara():
     components.html(html, height=600, scrolling=False)
 
     # --- 6. Obrada akcija iz popup-a (POPRAVLJENO) ---
+        # --- 6. Obrada akcija iz popup-a ---
     query_params = st.query_params
 
     if query_params.get("akcija") == "zakazi":
@@ -700,11 +701,9 @@ def prikaz_nedeljnog_kalendara():
             else:
                 if rezervisi_slotove(datum, slotovi_za_uslugu, ime, telefon, usluga, cena_int, trajanje_int):
                     st.success("✅ Termin uspešno zakazan!")
-                    # Očisti query i osveži
-                    st.query_params.clear()
-                    # Resetuj session_state za kalendar da bi se tabela osvežila
                     if 'kalendar_klik' in st.session_state:
                         del st.session_state['kalendar_klik']
+                    st.query_params.clear()
                     st.rerun()
                 else:
                     st.error("❌ Greška pri rezervaciji.")
@@ -718,11 +717,9 @@ def prikaz_nedeljnog_kalendara():
             c.execute("DELETE FROM rezervacije WHERE id=?", (termin_id,))
             conn.commit()
             conn.close()
-            st.success("🗑️ Termin obrisan!")
-            st.query_params.clear()
-            # Resetuj session_state
             if 'kalendar_klik' in st.session_state:
                 del st.session_state['kalendar_klik']
+            st.query_params.clear()
             st.rerun()
 
     if query_params.get("akcija") == "naplati":
@@ -733,11 +730,9 @@ def prikaz_nedeljnog_kalendara():
             c.execute("UPDATE rezervacije SET status='naplacen', payment_method='Keš' WHERE id=?", (termin_id,))
             conn.commit()
             conn.close()
-            st.success("💰 Termin naplaćen!")
-            st.query_params.clear()
-            # Resetuj session_state
             if 'kalendar_klik' in st.session_state:
                 del st.session_state['kalendar_klik']
+            st.query_params.clear()
             st.rerun()
 # ===================================================================
 # GLAVNI DEO
