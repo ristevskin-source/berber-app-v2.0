@@ -284,28 +284,31 @@ def admin_rucno_zakazi():
 # KALENDAR - SAMO TABELA (BEZ IKAKVIH AKCIJA)
 # ============================================================
 def prikaz_nedeljnog_kalendara():
-    st.subheader("📅 Nedeljni pregled")
+    st.subheader("📅 Nedeljni pregled (30 min slotovi)")
 
-    # Generiši datume
+    # --- 1. Generiši datume ---
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
 
-    # Dohvati zauzete termine
+    # --- 2. Dohvati zauzete termine ---
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     placeholders = ','.join(['?'] * len(datumi))
     c.execute(f"""
-        SELECT datum, vreme, ime FROM rezervacije
+        SELECT datum, vreme, ime, telefon, usluga, cena, id FROM rezervacije
         WHERE datum IN ({placeholders})
         AND ime IS NOT NULL
     """, [d.strftime('%Y-%m-%d') for d in datumi])
     zauzeti = c.fetchall()
     conn.close()
 
-    zauzeti_set = set((row[0], row[1]) for row in zauzeti)
+    podaci_termina = {}
+    for row in zauzeti:
+        datum, vreme, ime, telefon, usluga, cena, id = row
+        podaci_termina[(datum, vreme)] = (ime, telefon, usluga, cena, id)
 
-    # Generiši slotove (30 min)
+    # --- 3. Generiši slotove na 30 min ---
     slotovi = []
     trenutno = datetime.strptime("09:00", "%H:%M")
     kraj = datetime.strptime("20:00", "%H:%M")
@@ -317,8 +320,118 @@ def prikaz_nedeljnog_kalendara():
         slotovi.append(vreme_str)
         trenutno += timedelta(minutes=30)
 
+    # --- 4. Generiši HTML tabelu sa popup-om ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
+
+    # Kreiraj JavaScript za popup
+    js_popup = """
+    <script>
+    function otvoriPopup(tip, datum, vreme, ime, telefon, usluga, cena) {
+        // Kreiraj overlay
+        var overlay = document.createElement('div');
+        overlay.id = 'popup-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            animation: fadeIn 0.3s;
+        `;
+        
+        // Kreiraj popup prozor
+        var popup = document.createElement('div');
+        popup.style.cssText = `
+            background: #2b2b2b;
+            padding: 25px 30px;
+            border-radius: 15px;
+            border: 2px solid #d4af37;
+            max-width: 400px;
+            width: 90%;
+            color: white;
+            font-family: sans-serif;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            animation: slideUp 0.3s;
+        `;
+        
+        // Sadržaj popup-a
+        var sadrzaj = '';
+        if (tip === 'zauzet') {
+            sadrzaj = `
+                <h3 style="color: #d4af37; margin-top: 0;">👤 Detalji klijenta</h3>
+                <hr style="border-color: #444;">
+                <p><strong>Ime:</strong> ${ime}</p>
+                <p><strong>Telefon:</strong> ${telefon}</p>
+                <p><strong>Usluga:</strong> ${usluga}</p>
+                <p><strong>Cena:</strong> ${cena} din</p>
+                <p><strong>Datum:</strong> ${datum}  <strong>Vreme:</strong> ${vreme}</p>
+                <hr style="border-color: #444;">
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button onclick="zatvoriPopup()" style="
+                        flex: 1;
+                        padding: 10px;
+                        background: #c62828;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    ">✖️ Zatvori</button>
+                </div>
+            `;
+        } else {
+            sadrzaj = `
+                <h3 style="color: #d4af37; margin-top: 0;">📝 Novi termin</h3>
+                <hr style="border-color: #444;">
+                <p><strong>Datum:</strong> ${datum}  <strong>Vreme:</strong> ${vreme}</p>
+                <p style="color: #aaa; font-size: 14px;">Kliknite na zeleno dugme ispod tabele za unos podataka.</p>
+                <hr style="border-color: #444;">
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button onclick="zatvoriPopup()" style="
+                        flex: 1;
+                        padding: 10px;
+                        background: #2e7d32;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    ">✖️ Zatvori</button>
+                </div>
+            `;
+        }
+        
+        popup.innerHTML = sadrzaj;
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+        
+        // Dodaj CSS animacije
+        var style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideUp {
+                from { transform: translateY(30px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    function zatvoriPopup() {
+        var overlay = document.getElementById('popup-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+    }
+    </script>
+    """
 
     # HTML tabela
     html = f"""
@@ -369,7 +482,7 @@ def prikaz_nedeljnog_kalendara():
             position: sticky;
             left: 0;
             z-index: 5;
-            width: 60px;
+            width: 45px;
             min-width: 60px;
             max-width: 60px;
             white-space: nowrap;
@@ -380,22 +493,24 @@ def prikaz_nedeljnog_kalendara():
             min-width: 80px;
             max-width: 80px;
         }}
-        .slot-dugme {{
+        .slot-link {{
             display: inline-block;
             width: 44px;
             height: 44px;
             border-radius: 6px;
+            text-decoration: none;
+            cursor: pointer;
             font-size: 0px;
             padding: 0;
             margin: 0 auto;
             border: none;
+            transition: transform 0.1s;
         }}
-        .slot-slobodan {{
-            background-color: #2e7d32;
-        }}
-        .slot-zauzet {{
-            background-color: #c62828;
-        }}
+        .slot-link:active {{ transform: scale(0.92); }}
+        .slot-slobodan {{ background-color: #2e7d32; }}
+        .slot-slobodan:hover {{ background-color: #43a047; }}
+        .slot-zauzet {{ background-color: #c62828; }}
+        .slot-zauzet:hover {{ background-color: #e53935; }}
         .kalendar-wrapper::-webkit-scrollbar {{
             height: 6px; width: 6px;
         }}
@@ -404,10 +519,11 @@ def prikaz_nedeljnog_kalendara():
         @media (max-width: 600px) {{
             .vreme-kolona {{ width: 50px; min-width: 50px; max-width: 50px; font-size: 11px; }}
             .dan-kolona {{ width: 70px; min-width: 70px; max-width: 70px; }}
-            .slot-dugme {{ width: 38px; height: 38px; }}
+            .slot-link {{ width: 38px; height: 38px; }}
             .kalendar-tabela {{ min-width: 550px; font-size: 11px; }}
         }}
     </style>
+    {js_popup}
     </head>
     <body>
     <div class="kalendar-wrapper">
@@ -421,12 +537,35 @@ def prikaz_nedeljnog_kalendara():
     for slot in slotovi:
         html += f"<tr><td class='vreme-kolona'>{slot}</td>"
         for i, datum in enumerate(dani_vrednosti):
-            if (datum, slot) in zauzeti_set:
-                html += f"<td class='dan-kolona'><div class='slot-dugme slot-zauzet'></div></td>"
+            if (datum, slot) in podaci_termina:
+                ime, telefon, usluga, cena, id_termin = podaci_termina[(datum, slot)]
+                # Escaping za JavaScript
+                ime_esc = ime.replace("'", "\\'")
+                telefon_esc = telefon.replace("'", "\\'")
+                usluga_esc = usluga.replace("'", "\\'")
+                html += f"""
+                    <td class='dan-kolona'>
+                        <button class='slot-link slot-zauzet' 
+                                onclick="otvoriPopup('zauzet','{datum}','{slot}','{ime_esc}','{telefon_esc}','{usluga_esc}','{cena}')">
+                        </button>
+                    </td>
+                """
             else:
-                html += f"<td class='dan-kolona'><div class='slot-dugme slot-slobodan'></div></td>"
+                html += f"""
+                    <td class='dan-kolona'>
+                        <button class='slot-link slot-slobodan' 
+                                onclick="otvoriPopup('slobodan','{datum}','{slot}','','','','')">
+                        </button>
+                    </td>
+                """
         html += "</tr>"
-    html += "</tbody></table></div></body></html>"
+    html += """
+        </tbody>
+    </table>
+    </div>
+    </body>
+    </html>
+    """
 
     components.html(html, height=600, scrolling=False)
 
