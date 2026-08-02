@@ -281,7 +281,7 @@ def admin_rucno_zakazi():
             else: st.warning("⚠️ Popunite ime i telefon.")
 
 # ============================================================
-# KALENDAR - SAMO TABELA (BEZ IKAKVIH AKCIJA)
+# KALENDAR - SA POPUP-OM (ISPRAVLJENA VERZIJA)
 # ============================================================
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled (30 min slotovi)")
@@ -384,7 +384,7 @@ def prikaz_nedeljnog_kalendara():
                     <button onclick="zatvoriPopup()" style="
                         flex: 1;
                         padding: 10px;
-                        background: #666;
+                        background: #c62828;
                         color: white;
                         border: none;
                         border-radius: 8px;
@@ -392,6 +392,28 @@ def prikaz_nedeljnog_kalendara():
                         font-size: 16px;
                         min-width: 80px;
                     ">✖️ Zatvori</button>
+                    <button onclick="window.location.href='?akcija=obrisi&id=${{id}}'" style="
+                        flex: 1;
+                        padding: 10px;
+                        background: #e65100;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 16px;
+                        min-width: 80px;
+                    ">🗑️ Obriši</button>
+                    <button onclick="window.location.href='?akcija=naplati&id=${{id}}'" style="
+                        flex: 1;
+                        padding: 10px;
+                        background: #2e7d32;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 16px;
+                        min-width: 80px;
+                    ">💰 Naplati</button>
                 </div>
             `;
         }} else {{
@@ -441,7 +463,10 @@ def prikaz_nedeljnog_kalendara():
     """
     for u in usluge_opcije:
         dijelovi = u.split('||')
-        js_popup += f"<option value='{u}'>{dijelovi[0]} ({dijelovi[2]} min, {dijelovi[1]} din)</option>"
+        ime_usl = dijelovi[0]
+        cena_usl = dijelovi[1]
+        trajanje_usl = dijelovi[2]
+        js_popup += f"<option value='{ime_usl}||{cena_usl}||{trajanje_usl}'>{ime_usl} ({trajanje_usl} min, {cena_usl} din)</option>"
     
     js_popup += f"""
                         </select>
@@ -640,7 +665,7 @@ def prikaz_nedeljnog_kalendara():
                 html += f"""
                     <td class='dan-kolona'>
                         <button class='slot-link slot-slobodan' 
-                                onclick="otvoriPopup('slobodan','{datum}','{slot}','','','','')">
+                                onclick="otvoriPopup('slobodan','{datum}','{slot}','','','','','')">
                         </button>
                     </td>
                 """
@@ -655,8 +680,9 @@ def prikaz_nedeljnog_kalendara():
 
     components.html(html, height=600, scrolling=False)
 
-    # --- 6. Obrada akcije za zakazivanje ---
+    # --- 6. Obrada akcija iz popup-a ---
     query_params = st.query_params
+
     if query_params.get("akcija") == "zakazi":
         datum = query_params.get("datum")
         vreme = query_params.get("vreme")
@@ -680,6 +706,30 @@ def prikaz_nedeljnog_kalendara():
                     st.error("❌ Greška pri rezervaciji.")
         st.query_params.clear()
 
+    if query_params.get("akcija") == "obrisi":
+        termin_id = query_params.get("id")
+        if termin_id:
+            conn = sqlite3.connect('termini.db')
+            c = conn.cursor()
+            c.execute("DELETE FROM rezervacije WHERE id=?", (termin_id,))
+            conn.commit()
+            conn.close()
+            st.success("🗑️ Termin obrisan!")
+            st.query_params.clear()
+            st.rerun()
+
+    if query_params.get("akcija") == "naplati":
+        termin_id = query_params.get("id")
+        if termin_id:
+            conn = sqlite3.connect('termini.db')
+            c = conn.cursor()
+            c.execute("UPDATE rezervacije SET status='naplacen', payment_method='Keš' WHERE id=?", (termin_id,))
+            conn.commit()
+            conn.close()
+            st.success("💰 Termin naplaćen!")
+            st.query_params.clear()
+            st.rerun()
+
 # ===================================================================
 # GLAVNI DEO
 # ===================================================================
@@ -692,6 +742,7 @@ if 'admin_authenticated' not in st.session_state: st.session_state['admin_authen
 if 'admin_password' not in st.session_state: st.session_state['admin_password'] = 'admin123'
 if 'naplata_id' not in st.session_state: st.session_state['naplata_id'] = None
 if 'admin_selected_date' not in st.session_state: st.session_state['admin_selected_date'] = datetime.now().date()
+if 'kalendar_klik' not in st.session_state: st.session_state['kalendar_klik'] = None
 
 tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
 
