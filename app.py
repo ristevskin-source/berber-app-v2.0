@@ -427,32 +427,146 @@ def admin_rucno_zakazi():
 # KALENDAR - SAMO PRIKAZ (BEZ AKCIJA)
 # ============================================================
 def prikaz_nedeljnog_kalendara():
-    st.subheader("📅 Nedeljni pregled (test)")
-    st.write("Ovo je test verzija kalendara.")
-    
-    # Generiši datume
+    st.subheader("📅 Nedeljni pregled (30 min slotovi)")
+
+    # --- 1. Generiši datume ---
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
-    
-    # Prikaži datume
-    cols = st.columns([1] + [2]*7)
-    with cols[0]:
-        st.write("**Vreme**")
-    for i, d in enumerate(datumi):
-        with cols[i+1]:
-            st.write(f"**{d.strftime('%a')}**")
-    
-    # Prikaži nekoliko slotova
-    for hour in range(9, 20):
-        if hour == 12:
+
+    # --- 2. Dohvati zauzete termine ---
+    conn = sqlite3.connect('termini.db')
+    c = conn.cursor()
+    placeholders = ','.join(['?'] * len(datumi))
+    c.execute(f"""
+        SELECT datum, vreme, ime, telefon, usluga, cena FROM rezervacije
+        WHERE datum IN ({placeholders})
+        AND ime IS NOT NULL
+    """, [d.strftime('%Y-%m-%d') for d in datumi])
+    zauzeti = c.fetchall()
+    conn.close()
+
+    podaci_termina = {}
+    for row in zauzeti:
+        datum, vreme, ime, telefon, usluga, cena = row
+        podaci_termina[(datum, vreme)] = (ime, telefon, usluga, cena)
+
+    # --- 3. Generiši slotove na 30 min (09:00 - 20:00) ---
+    slotovi = []
+    trenutno = datetime.strptime("09:00", "%H:%M")
+    kraj = datetime.strptime("20:00", "%H:%M")
+    while trenutno < kraj:
+        vreme_str = trenutno.strftime("%H:%M")
+        if "12:00" <= vreme_str < "13:00":
+            trenutno += timedelta(minutes=30)
             continue
-        cols = st.columns([1] + [2]*7)
+        slotovi.append(vreme_str)
+        trenutno += timedelta(minutes=30)
+
+    # --- 4. Prikaz tabele sa Streamlit kolonama ---
+    # Prvo zaglavlje
+    header_cols = st.columns([0.5] + [1]*7)
+    with header_cols[0]:
+        st.markdown("**Vreme**")
+    for i, d in enumerate(datumi):
+        with header_cols[i+1]:
+            st.markdown(f"**{d.strftime('%a')}**<br><small>{d.strftime('%d.%m.')}</small>", unsafe_allow_html=True)
+
+    # Redovi
+    for slot in slotovi:
+        cols = st.columns([0.5] + [1]*7)
         with cols[0]:
-            st.write(f"{hour:02d}:00")
-        for i in range(7):
+            st.write(slot)
+
+        for i, d in enumerate(datumi):
+            datum_str = d.strftime('%Y-%m-%d')
+            key = (datum_str, slot)
             with cols[i+1]:
-                st.button("⬜", key=f"test_{hour}_{i}")
+                if key in podaci_termina:
+                    # Zauzeto - crveno dugme
+                    if st.button("🔴", key=f"z_{datum_str}_{slot}", help="Zauzet termin", use_container_width=True):
+                        ime, telefon, usluga, cena = podaci_termina[key]
+                        st.session_state['kalendar_selekcija'] = {
+                            'tip': 'zauzet',
+                            'datum': datum_str,
+                            'vreme': slot,
+                            'ime': ime,
+                            'telefon': telefon,
+                            'usluga': usluga,
+                            'cena': cena
+                        }
+                        st.rerun()
+                else:
+                    # Slobodno - zeleno dugme
+                    if st.button("🟢", key=f"s_{datum_str}_{slot}", help="Slobodan termin", use_container_width=True):
+                        st.session_state['kalendar_selekcija'] = {
+                            'tip': 'slobodan',
+                            'datum': datum_str,
+                            'vreme': slot
+                        }
+                        st.rerun()
+
+    # --- 5. Prikaz detalja ili forme na osnovu session_state ---
+    if 'kalendar_selekcija' in st.session_state and st.session_state['kalendar_selekcija']:
+        selektovano = st.session_state['kalendar_selekcija']
+        st.divider()
+
+        if selektovano['tip'] == 'zauzet':
+            st.subheader("👤 Detalji klijenta")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**Ime:** {selektovano['ime']}")
+                st.write(f"**Telefon:** {selektovano['telefon']}")
+            with col2:
+                st.write(f"**Usluga:** {selektovano['usluga']}")
+                st.write(f"**Cena:** {selektovano['cena']} din")
+            st.write(f"**Datum:** {selektovano['datum']}  **Vreme:** {selektovano['vreme']}")
+
+            if st.button("✖️ Zatvori detalje"):
+                del st.session_state['kalendar_selekcija']
+                st.rerun()
+
+        elif selektovano['tip'] == 'slobodan':
+            st.subheader("📝 Novi termin")
+            st.write(f"**Datum:** {selektovano['datum']}  **Vreme:** {selektovano['vreme']}")
+
+            with st.form(key="novi_termin_kalendar"):
+                ime = st.text_input("Ime i prezime *")
+                telefon = st.text_input("Telefon *")
+
+                conn = sqlite3.connect('termini.db')
+                c = conn.cursor()
+                c.execute("SELECT usluga, cena, trajanje FROM cenovnik ORDER BY trajanje ASC")
+                usluge = c.fetchall()
+                conn.close()
+
+                usluga_opcije = [f"{u[0]} ({u[2]} min, {u[1]} din)" for u in usluge]
+                izabrana = st.selectbox("Usluga", usluga_opcije)
+                idx = usluga_opcije.index(izabrana) if izabrana in usluga_opcije else 0
+                usluga_ime = usluge[idx][0]
+                usluga_cena = usluge[idx][1]
+                usluga_trajanje = usluge[idx][2]
+
+                potvrdi = st.form_submit_button("✅ Zakaži")
+
+                if potvrdi:
+                    if ime and telefon and ime.strip() and telefon.strip():
+                        slotovi_za_uslugu = proveri_slotove_za_uslugu(selektovano['datum'], selektovano['vreme'], usluga_trajanje)
+                        if slotovi_za_uslugu is None:
+                            st.error("❌ Nema dovoljno slobodnih termina za ovu uslugu u izabrano vreme.")
+                        else:
+                            if rezervisi_slotove(selektovano['datum'], slotovi_za_uslugu, ime, telefon, usluga_ime, usluga_cena, usluga_trajanje):
+                                st.success("✅ Termin uspešno zakazan!")
+                                del st.session_state['kalendar_selekcija']
+                                st.rerun()
+                            else:
+                                st.error("❌ Greška pri rezervaciji.")
+                    else:
+                        st.warning("⚠️ Popunite ime i telefon.")
+
+            if st.button("✖️ Odustani"):
+                del st.session_state['kalendar_selekcija']
+                st.rerun()
 
 # ===================================================================
 # GLAVNI DEO
