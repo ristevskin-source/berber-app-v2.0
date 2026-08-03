@@ -251,7 +251,7 @@ def prikazi_slotove(datum):
                             st.session_state['izabrani_termin'] = termin; st.rerun()
 
 # ============================================================
-# KALENDAR - STREAMLIT DUGMADI (BEZ HTML-a)
+# KALENDAR - STREAMLIT KOLONE SA DUGMADIMA + EXPANDER
 # ============================================================
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled (30 min slotovi)")
@@ -314,7 +314,7 @@ def prikaz_nedeljnog_kalendara():
             with cols[i+1]:
                 if key in podaci_termina:
                     # Zauzeto - crveno dugme
-                    if st.button("", key=f"z_{datum_str}_{slot}", help="Zauzet termin", use_container_width=True):
+                    if st.button("🔴", key=f"z_{datum_str}_{slot}", help="Zauzet termin", use_container_width=True):
                         ime, telefon, usluga, cena, id_termin = podaci_termina[key]
                         st.session_state['kalendar_klik'] = {
                             'tip': 'zauzet',
@@ -327,50 +327,15 @@ def prikaz_nedeljnog_kalendara():
                             'id': id_termin
                         }
                         st.rerun()
-                    # Stilizuj dugme
-                    st.markdown("""
-                        <style>
-                        div[data-testid="column"] button {
-                            background-color: #c62828 !important;
-                            color: white !important;
-                            border: none !important;
-                            width: 44px !important;
-                            height: 44px !important;
-                            border-radius: 6px !important;
-                            padding: 0 !important;
-                            font-size: 0px !important;
-                        }
-                        div[data-testid="column"] button:hover {
-                            background-color: #e53935 !important;
-                        }
-                        </style>
-                    """, unsafe_allow_html=True)
                 else:
                     # Slobodno - zeleno dugme
-                    if st.button("", key=f"s_{datum_str}_{slot}", help="Slobodan termin", use_container_width=True):
+                    if st.button("🟢", key=f"s_{datum_str}_{slot}", help="Slobodan termin", use_container_width=True):
                         st.session_state['kalendar_klik'] = {
                             'tip': 'slobodan',
                             'datum': datum_str,
                             'vreme': slot
                         }
                         st.rerun()
-                    st.markdown("""
-                        <style>
-                        div[data-testid="column"] button {
-                            background-color: #2e7d32 !important;
-                            color: white !important;
-                            border: none !important;
-                            width: 44px !important;
-                            height: 44px !important;
-                            border-radius: 6px !important;
-                            padding: 0 !important;
-                            font-size: 0px !important;
-                        }
-                        div[data-testid="column"] button:hover {
-                            background-color: #43a047 !important;
-                        }
-                        </style>
-                    """, unsafe_allow_html=True)
 
     # --- 5. Prikaz expandera ---
     if 'kalendar_klik' in st.session_state and st.session_state['kalendar_klik']:
@@ -622,3 +587,15 @@ with tab2:
         st.write(f"## 📊 Finansijski pregled za {formatiraj_datum(admin_datum)}")
         col1, col2 = st.columns(2)
         with col1: st.metric("📅 Zakazano za izabrani dan", get_unique_clients_count_for_date(admin_datum))
+        with col2: st.metric("📆 Zakazano u narednih 7 dana", get_unique_clients_count_next_7_days())
+        col3, col4 = st.columns(2)
+        with col3:
+            st.write("**💰 Mesečni pazar**")
+            uk, ke, ka = get_monthly_earnings_breakdown()
+            st.write(f"Keš: {ke:,.0f} din"); st.write(f"Kartica: {ka:,.0f} din"); st.write(f"**Ukupno: {uk:,.0f} din**")
+        with col4:
+            st.write("**📈 Godišnji pazar**")
+            uk, ke, ka = get_yearly_earnings_breakdown()
+            st.write(f"Keš: {ke:,.0f} din"); st.write(f"Kartica: {ka:,.0f} din"); st.write(f"**Ukupno: {uk:,.0f} din**")
+        st.markdown("---")
+        uk
