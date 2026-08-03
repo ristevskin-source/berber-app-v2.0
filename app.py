@@ -251,7 +251,7 @@ def prikazi_slotove(datum):
                             st.session_state['izabrani_termin'] = termin; st.rerun()
 
 # ============================================================
-# KALENDAR - STREAMLIT KOLONE SA DUGMADIMA + EXPANDER
+# KALENDAR - JEDNA TABELA + JEDAN EXPANDER
 # ============================================================
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled (30 min slotovi)")
@@ -293,7 +293,7 @@ def prikaz_nedeljnog_kalendara():
         slotovi.append(vreme_str)
         trenutno += timedelta(minutes=30)
 
-    # --- 4. Prikaz tabele sa Streamlit kolonama ---
+    # --- 4. Prikaz tabele ---
     # Zaglavlje
     header_cols = st.columns([0.5] + [1]*7)
     with header_cols[0]:
@@ -313,10 +313,10 @@ def prikaz_nedeljnog_kalendara():
             key = (datum_str, slot)
             with cols[i+1]:
                 if key in podaci_termina:
-                    # Zauzeto - crveno dugme
-                    if st.button("🔴", key=f"z_{datum_str}_{slot}", help="Zauzet termin", use_container_width=True):
+                    # Zauzeto
+                    if st.button("🔴", key=f"z_{datum_str}_{slot}", use_container_width=True):
                         ime, telefon, usluga, cena, id_termin = podaci_termina[key]
-                        st.session_state['kalendar_klik'] = {
+                        st.session_state['selected_slot'] = {
                             'tip': 'zauzet',
                             'datum': datum_str,
                             'vreme': slot,
@@ -328,141 +328,139 @@ def prikaz_nedeljnog_kalendara():
                         }
                         st.rerun()
                 else:
-                    # Slobodno - zeleno dugme
-                    if st.button("🟢", key=f"s_{datum_str}_{slot}", help="Slobodan termin", use_container_width=True):
-                        st.session_state['kalendar_klik'] = {
+                    # Slobodno
+                    if st.button("🟢", key=f"s_{datum_str}_{slot}", use_container_width=True):
+                        st.session_state['selected_slot'] = {
                             'tip': 'slobodan',
                             'datum': datum_str,
                             'vreme': slot
                         }
                         st.rerun()
 
-    # --- 5. Prikaz expandera ---
-    if 'kalendar_klik' in st.session_state and st.session_state['kalendar_klik']:
-        klik = st.session_state['kalendar_klik']
-        tip = klik['tip']
-        datum = klik['datum']
-        vreme = klik['vreme']
-
-        if tip == 'zauzet':
+    # --- 5. JEDAN EXPANDER ---
+    if 'selected_slot' in st.session_state:
+        slot = st.session_state['selected_slot']
+        st.divider()
+        
+        if slot['tip'] == 'zauzet':
             with st.expander("👤 Detalji klijenta", expanded=True):
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.write(f"**Ime:** {klik['ime']}")
-                    st.write(f"**Telefon:** {klik['telefon']}")
+                    st.write(f"**Ime:** {slot['ime']}")
+                    st.write(f"**Telefon:** {slot['telefon']}")
                 with col2:
-                    st.write(f"**Usluga:** {klik['usluga']}")
-                    st.write(f"**Cena:** {klik['cena']} din")
-                st.write(f"**Datum:** {datum}  **Vreme:** {vreme}")
+                    st.write(f"**Usluga:** {slot['usluga']}")
+                    st.write(f"**Cena:** {slot['cena']} din")
+                st.write(f"**Datum:** {slot['datum']}  **Vreme:** {slot['vreme']}")
                 
                 st.write("---")
                 col_akcije = st.columns(4)
                 with col_akcije[0]:
                     if st.button("✖️ Zatvori", use_container_width=True):
-                        del st.session_state['kalendar_klik']
+                        del st.session_state['selected_slot']
                         st.rerun()
                 with col_akcije[1]:
                     if st.button("🗑️ Obriši", use_container_width=True):
                         conn = sqlite3.connect('termini.db')
                         c = conn.cursor()
-                        c.execute("DELETE FROM rezervacije WHERE id=?", (klik['id'],))
+                        c.execute("DELETE FROM rezervacije WHERE id=?", (slot['id'],))
                         conn.commit()
                         conn.close()
-                        del st.session_state['kalendar_klik']
+                        del st.session_state['selected_slot']
                         st.rerun()
                 with col_akcije[2]:
                     if st.button("💰 Naplati", use_container_width=True):
                         conn = sqlite3.connect('termini.db')
                         c = conn.cursor()
-                        c.execute("UPDATE rezervacije SET status='naplacen', payment_method='Keš' WHERE id=?", (klik['id'],))
+                        c.execute("UPDATE rezervacije SET status='naplacen', payment_method='Keš' WHERE id=?", (slot['id'],))
                         conn.commit()
                         conn.close()
-                        del st.session_state['kalendar_klik']
+                        del st.session_state['selected_slot']
                         st.rerun()
                 with col_akcije[3]:
                     if st.button("🔄 Prezakazi", use_container_width=True):
-                        st.session_state['prezakazi_termin'] = {
-                            'id': klik['id'],
-                            'datum': datum,
-                            'vreme': vreme
+                        st.session_state['prezakazi'] = {
+                            'id': slot['id'],
+                            'datum': slot['datum'],
+                            'vreme': slot['vreme']
                         }
-                        del st.session_state['kalendar_klik']
+                        del st.session_state['selected_slot']
                         st.rerun()
-
-        elif tip == 'slobodan':
+        
+        elif slot['tip'] == 'slobodan':
             with st.expander("📝 Novi termin", expanded=True):
-                st.write(f"**Datum:** {datum}  **Vreme:** {vreme}")
+                st.write(f"**Datum:** {slot['datum']}  **Vreme:** {slot['vreme']}")
                 
-                with st.form(key="novi_termin_kalendar"):
+                with st.form(key="novi_termin"):
                     ime = st.text_input("Ime i prezime *")
                     telefon = st.text_input("Telefon *")
-
+                    
                     conn = sqlite3.connect('termini.db')
                     c = conn.cursor()
                     c.execute("SELECT usluga, cena, trajanje FROM cenovnik ORDER BY trajanje ASC")
                     usluge = c.fetchall()
                     conn.close()
-
+                    
                     usluga_opcije = [f"{u[0]} ({u[2]} min, {u[1]} din)" for u in usluge]
                     izabrana = st.selectbox("Usluga", usluga_opcije)
                     idx = usluga_opcije.index(izabrana) if izabrana in usluga_opcije else 0
                     usluga_ime = usluge[idx][0]
                     usluga_cena = usluge[idx][1]
                     usluga_trajanje = usluge[idx][2]
-
-                    col_potvrdi, col_odustani = st.columns(2)
-                    with col_potvrdi:
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
                         potvrdi = st.form_submit_button("✅ Zakaži")
-                    with col_odustani:
+                    with col2:
                         if st.form_submit_button("✖️ Odustani"):
-                            del st.session_state['kalendar_klik']
+                            del st.session_state['selected_slot']
                             st.rerun()
-
+                    
                     if potvrdi:
                         if ime and telefon and ime.strip() and telefon.strip():
-                            slotovi_za_uslugu = proveri_slotove_za_uslugu(datum, vreme, usluga_trajanje)
+                            slotovi_za_uslugu = proveri_slotove_za_uslugu(slot['datum'], slot['vreme'], usluga_trajanje)
                             if slotovi_za_uslugu is None:
                                 st.error("❌ Nema dovoljno slobodnih termina.")
                             else:
-                                if rezervisi_slotove(datum, slotovi_za_uslugu, ime, telefon, usluga_ime, usluga_cena, usluga_trajanje):
+                                if rezervisi_slotove(slot['datum'], slotovi_za_uslugu, ime, telefon, usluga_ime, usluga_cena, usluga_trajanje):
                                     st.success("✅ Termin uspešno zakazan!")
-                                    del st.session_state['kalendar_klik']
+                                    del st.session_state['selected_slot']
                                     st.rerun()
                                 else:
                                     st.error("❌ Greška pri rezervaciji.")
                         else:
                             st.warning("⚠️ Popunite ime i telefon.")
-
-    # --- 6. Prezakazivanje ---
-    if 'prezakazi_termin' in st.session_state:
-        prezakazi = st.session_state['prezakazi_termin']
-        with st.expander("🔄 Prezakazivanje", expanded=True):
-            st.write(f"**Trenutni termin:** {prezakazi['datum']} {prezakazi['vreme']}")
-            novi_datum = st.date_input("Novi datum", value=datetime.strptime(prezakazi['datum'], "%Y-%m-%d").date())
-            novo_vreme = st.time_input("Novo vreme", value=datetime.strptime(prezakazi['vreme'], "%H:%M").time(), step=timedelta(minutes=30))
-            
-            col_potvrdi, col_odustani = st.columns(2)
-            with col_potvrdi:
-                if st.button("✅ Potvrdi prezakazivanje", use_container_width=True):
-                    novi_datum_str = novi_datum.strftime("%Y-%m-%d")
-                    novo_vreme_str = novo_vreme.strftime("%H:%M")
-                    conn = sqlite3.connect('termini.db')
-                    c = conn.cursor()
-                    c.execute("SELECT ime FROM rezervacije WHERE datum=? AND vreme=? AND ime IS NOT NULL", (novi_datum_str, novo_vreme_str))
-                    if c.fetchone():
-                        st.error("❌ Izabrani termin je već zauzet!")
-                    else:
-                        c.execute("UPDATE rezervacije SET datum=?, vreme=? WHERE id=?", (novi_datum_str, novo_vreme_str, prezakazi['id']))
-                        conn.commit()
+        
+        # Prezakazivanje (ako je aktivirano)
+        if 'prezakazi' in st.session_state:
+            p = st.session_state['prezakazi']
+            with st.expander("🔄 Prezakazivanje", expanded=True):
+                st.write(f"**Trenutni termin:** {p['datum']} {p['vreme']}")
+                novi_datum = st.date_input("Novi datum", value=datetime.strptime(p['datum'], "%Y-%m-%d").date())
+                novo_vreme = st.time_input("Novo vreme", value=datetime.strptime(p['vreme'], "%H:%M").time(), step=timedelta(minutes=30))
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("✅ Potvrdi", use_container_width=True):
+                        novi_datum_str = novi_datum.strftime("%Y-%m-%d")
+                        novo_vreme_str = novo_vreme.strftime("%H:%M")
+                        conn = sqlite3.connect('termini.db')
+                        c = conn.cursor()
+                        c.execute("SELECT ime FROM rezervacije WHERE datum=? AND vreme=? AND ime IS NOT NULL", (novi_datum_str, novo_vreme_str))
+                        if c.fetchone():
+                            st.error("❌ Izabrani termin je već zauzet!")
+                        else:
+                            c.execute("UPDATE rezervacije SET datum=?, vreme=? WHERE id=?", (novi_datum_str, novo_vreme_str, p['id']))
+                            conn.commit()
+                            conn.close()
+                            st.success("✅ Termin prezakazan!")
+                            del st.session_state['prezakazi']
+                            st.rerun()
                         conn.close()
-                        st.success("✅ Termin prezakazan!")
-                        del st.session_state['prezakazi_termin']
+                with col2:
+                    if st.button("✖️ Odustani", use_container_width=True):
+                        del st.session_state['prezakazi']
                         st.rerun()
-                    conn.close()
-            with col_odustani:
-                if st.button("✖️ Odustani od prezakazivanja", use_container_width=True):
-                    del st.session_state['prezakazi_termin']
-                    st.rerun()
 
 # ===================================================================
 # GLAVNI DEO
@@ -476,8 +474,8 @@ if 'admin_authenticated' not in st.session_state: st.session_state['admin_authen
 if 'admin_password' not in st.session_state: st.session_state['admin_password'] = 'admin123'
 if 'naplata_id' not in st.session_state: st.session_state['naplata_id'] = None
 if 'admin_selected_date' not in st.session_state: st.session_state['admin_selected_date'] = datetime.now().date()
-if 'kalendar_klik' not in st.session_state: st.session_state['kalendar_klik'] = None
-if 'prezakazi_termin' not in st.session_state: st.session_state['prezakazi_termin'] = None
+if 'selected_slot' not in st.session_state: st.session_state['selected_slot'] = None
+if 'prezakazi' not in st.session_state: st.session_state['prezakazi'] = None
 
 tab1, tab2 = st.tabs(["📅 Zakazivanje", "🔑 Admin Panel"])
 
@@ -598,4 +596,10 @@ with tab2:
             uk, ke, ka = get_yearly_earnings_breakdown()
             st.write(f"Keš: {ke:,.0f} din"); st.write(f"Kartica: {ka:,.0f} din"); st.write(f"**Ukupno: {uk:,.0f} din**")
         st.markdown("---")
-        uk
+        ukupno, kes, kartica = get_earnings_breakdown_for_date(admin_datum)
+        st.markdown(f"""
+        <div style="background-color: #1e1e1e; padding: 20px; border-radius: 10px; border: 2px solid #d4af37; text-align: center;">
+            <h3 style="color: #d4af37;">💵 Pazar za {formatiraj_datum(admin_datum)} (do sada)</h3>
+            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 10px;">
+                <div><span style="color: #aaa;">Keš:</span> <span style="color:white; font-weight:bold;">{kes:,.0f} din</span></div>
+                <div
