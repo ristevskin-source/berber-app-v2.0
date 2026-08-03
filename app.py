@@ -590,11 +590,15 @@ with tab2:
         with col3:
             st.write("**💰 Mesečni pazar**")
             uk, ke, ka = get_monthly_earnings_breakdown()
-            st.write(f"Keš: {ke:,.0f} din"); st.write(f"Kartica: {ka:,.0f} din"); st.write(f"**Ukupno: {uk:,.0f} din**")
+            st.write(f"Keš: {ke:,.0f} din")
+            st.write(f"Kartica: {ka:,.0f} din")
+            st.write(f"**Ukupno: {uk:,.0f} din**")
         with col4:
             st.write("**📈 Godišnji pazar**")
             uk, ke, ka = get_yearly_earnings_breakdown()
-            st.write(f"Keš: {ke:,.0f} din"); st.write(f"Kartica: {ka:,.0f} din"); st.write(f"**Ukupno: {uk:,.0f} din**")
+            st.write(f"Keš: {ke:,.0f} din")
+            st.write(f"Kartica: {ka:,.0f} din")
+            st.write(f"**Ukupno: {uk:,.0f} din**")
         st.markdown("---")
         ukupno, kes, kartica = get_earnings_breakdown_for_date(admin_datum)
         st.markdown(f"""
@@ -602,4 +606,4 @@ with tab2:
             <h3 style="color: #d4af37;">💵 Pazar za {formatiraj_datum(admin_datum)} (do sada)</h3>
             <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 10px;">
                 <div><span style="color: #aaa;">Keš:</span> <span style="color:white; font-weight:bold;">{kes:,.0f} din</span></div>
-                <div
+                <div><span style="color: #aaa;">Kartica:</span> <
