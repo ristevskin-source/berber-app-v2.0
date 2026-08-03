@@ -642,4 +642,77 @@ with tab1:
                                     else:
                                         if rezervisi_slotove(datum, slotovi, ime, telefon, usluga['ime'], usluga['cena'], usluga['trajanje']):
                                             st.session_state['izabrani_termin'] = None
-                                            st.session_state['izab
+                                            st.session_state['izabrana_usluga'] = None
+                                            st.session_state['booking_success'] = True
+                                            st.session_state['booking_details'] = {
+                                                'usluga': usluga['ime'],
+                                                'datum': datum,
+                                                'vreme': kliknuto_vreme,
+                                                'trajanje': usluga['trajanje'],
+                                                'cena': usluga['cena'],
+                                                'ime': ime
+                                            }
+                                            st.rerun()
+                                        else: st.error("❌ Greška pri rezervaciji.")
+                                else: st.warning("⚠️ Popunite ime i telefon.")
+        else: st.error("❌ Nema dostupnih datuma.")
+
+# --- TAB 2 ---
+with tab2:
+    if not st.session_state['admin_authenticated']:
+        st.write("### 🔐 Admin pristup")
+        password = st.text_input("Unesite lozinku", type="password")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Potvrdi"):
+                if password == st.session_state['admin_password']:
+                    st.session_state['admin_authenticated'] = True; st.rerun()
+                else: st.error("Pogrešna lozinka!")
+    else:
+        with st.expander("🔑 Promeni lozinku"):
+            old = st.text_input("Stara lozinka", type="password", key="old_pass")
+            new = st.text_input("Nova lozinka", type="password", key="new_pass")
+            confirm = st.text_input("Potvrdi novu lozinku", type="password", key="confirm_pass")
+            if st.button("Promeni lozinku"):
+                if old == st.session_state['admin_password']:
+                    if new and new == confirm:
+                        st.session_state['admin_password'] = new
+                        st.success("Lozinka uspešno promenjena!")
+                    else: st.error("Nove lozinke se ne poklapaju ili su prazne")
+                else: st.error("Stara lozinka nije tačna")
+
+        st.write("---")
+        st.write("## 📅 Odaberite datum za pregled")
+        admin_datumi = generisi_datume()
+        admin_datum = st.selectbox("Izaberite datum", admin_datumi, index=0, format_func=formatiraj_datum, key="admin_datum_select")
+        st.session_state['admin_selected_date'] = admin_datum
+        st.write("---")
+        st.write(f"## 📊 Finansijski pregled za {formatiraj_datum(admin_datum)}")
+        col1, col2 = st.columns(2)
+        with col1: st.metric("📅 Zakazano za izabrani dan", get_unique_clients_count_for_date(admin_datum))
+        with col2: st.metric("📆 Zakazano u narednih 7 dana", get_unique_clients_count_next_7_days())
+        col3, col4 = st.columns(2)
+        with col3:
+            st.write("**💰 Mesečni pazar**")
+            uk, ke, ka = get_monthly_earnings_breakdown()
+            st.write(f"Keš: {ke:,.0f} din"); st.write(f"Kartica: {ka:,.0f} din"); st.write(f"**Ukupno: {uk:,.0f} din**")
+        with col4:
+            st.write("**📈 Godišnji pazar**")
+            uk, ke, ka = get_yearly_earnings_breakdown()
+            st.write(f"Keš: {ke:,.0f} din"); st.write(f"Kartica: {ka:,.0f} din"); st.write(f"**Ukupno: {uk:,.0f} din**")
+        st.markdown("---")
+        ukupno, kes, kartica = get_earnings_breakdown_for_date(admin_datum)
+        st.markdown(f"""
+        <div style="background-color: #1e1e1e; padding: 20px; border-radius: 10px; border: 2px solid #d4af37; text-align: center;">
+            <h3 style="color: #d4af37;">💵 Pazar za {formatiraj_datum(admin_datum)} (do sada)</h3>
+            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 10px;">
+                <div><span style="color: #aaa;">Keš:</span> <span style="color:white; font-weight:bold;">{kes:,.0f} din</span></div>
+                <div><span style="color: #aaa;">Kartica:</span> <span style="color:white; font-weight:bold;">{kartica:,.0f} din</span></div>
+                <div><span style="color: #d4af37;">Ukupno:</span> <span style="color:#d4af37; font-size:1.4em; font-weight:bold;">{ukupno:,.0f} din</span></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ---- KALENDAR (TABELA + EXPANDER) ----
+        st.write("---")
+        prikaz_nedeljnog_kalendara()
