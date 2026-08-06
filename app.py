@@ -604,6 +604,7 @@ def admin_rucno_zakazi():
 # ============================================================
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled")
+    st.write(f"DEBUG: session_state = {st.session_state.get('kalendar_klik', 'Nema')}")
 
     # --- Generiši datume za tekuću nedelju ---
     danas = datetime.now().date()
