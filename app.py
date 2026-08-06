@@ -604,7 +604,6 @@ def admin_rucno_zakazi():
 # ============================================================
 def prikaz_nedeljnog_kalendara():
     st.subheader("📅 Nedeljni pregled")
-    st.write(f"DEBUG: session_state = {st.session_state.get('kalendar_klik', 'Nema')}")
 
     # --- Generiši datume za tekuću nedelju ---
     danas = datetime.now().date()
@@ -640,172 +639,46 @@ def prikaz_nedeljnog_kalendara():
         slotovi.append(vreme_str)
         trenutno += timedelta(minutes=15)
 
-    # --- Pripremi podatke za HTML tabelu ---
-    dani_oznake = [d.strftime("%a %d.") for d in datumi]
-    dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
+    # --- Prikaz tabele sa Streamlit dugmadima ---
+    # Prvo prikaži zaglavlje (dani)
+    header_cols = st.columns([1] + [1]*len(datumi))  # prva kolona za vreme
+    with header_cols[0]:
+        st.markdown("**Vreme**")
+    for i, dan in enumerate(datumi):
+        with header_cols[i+1]:
+            st.markdown(f"**{dan.strftime('%a %d.')}**")
 
-    # --- Generiši HTML + JavaScript (SA SIGURNIM POZIVOM) ---
-    html = f"""
-    <style>
-        .kalendar-wrapper {{
-            overflow-x: auto;
-            overflow-y: auto;
-            max-height: 90vh;
-            -webkit-overflow-scrolling: touch;
-            margin: 10px 0;
-            border: 1px solid #444;
-            border-radius: 8px;
-            background-color: #1e1e1e;
-        }}
-        .kalendar-tabela {{
-            border-collapse: collapse;
-            width: 100%;
-            min-width: 600px;
-            font-size: 14px;
-            color: white;
-        }}
-        .kalendar-tabela th, .kalendar-tabela td {{
-            padding: 4px 2px;
-            text-align: center;
-            border-bottom: 1px solid #333;
-            border-right: 1px solid #333;
-        }}
-        .kalendar-tabela th {{
-            background-color: #2b2b2b;
-            color: #d4af37;
-            font-weight: bold;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }}
-        .vreme-kolona {{
-            background-color: #2b2b2b;
-            font-weight: bold;
-            color: #aaa;
-            position: sticky;
-            left: 0;
-            z-index: 5;
-            min-width: 45px;
-            max-width: 45px;
-            white-space: nowrap;
-            padding: 2px 2px !important;
-        }}
-        .slot-dugme {{
-            display: inline-block;
-            width: 44px;
-            height: 44px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            font-size: 0px;
-            padding: 0;
-            margin: 0 auto;
-            transition: transform 0.1s;
-        }}
-        .slot-dugme:active {{
-            transform: scale(0.92);
-        }}
-        .slot-slobodan {{
-            background-color: #2e7d32;
-        }}
-        .slot-slobodan:hover {{
-            background-color: #43a047;
-        }}
-        .slot-zauzet {{
-            background-color: #c62828;
-        }}
-        .slot-zauzet:hover {{
-            background-color: #e53935;
-        }}
-        .dan-kolona {{
-            min-width: 64px;
-        }}
-        .kalendar-wrapper::-webkit-scrollbar {{
-            height: 6px;
-            width: 6px;
-        }}
-        .kalendar-wrapper::-webkit-scrollbar-track {{
-            background: #2b2b2b;
-        }}
-        .kalendar-wrapper::-webkit-scrollbar-thumb {{
-            background: #d4af37;
-            border-radius: 3px;
-        }}
-    </style>
-    <script>
-        function klikniSlot(tip, datum, vreme) {{
-            // Pomoću POST zahteva šaljemo podatke Streamlit-u
-            const url = new URL(window.location.href);
-            url.searchParams.set('tip', tip);
-            url.searchParams.set('datum', datum);
-            url.searchParams.set('vreme', vreme);
-            url.searchParams.set('akcija', 'klik');
-            window.location.href = url.toString();
-        }}
-    </script>
-    <div class="kalendar-wrapper">
-    <table class="kalendar-tabela">
-        <thead>
-            <tr>
-                <th class="vreme-kolona">Vreme</th>
-    """
-    for oznaka in dani_oznake:
-        html += f"<th class='dan-kolona'>{oznaka}</th>"
-    html += """
-            </tr>
-        </thead>
-        <tbody>
-    """
-
+    # Za svaki slot (vreme) prikaži red
     for slot in slotovi:
-        html += f"<tr><td class='vreme-kolona'>{slot}</td>"
-        for i, datum in enumerate(dani_vrednosti):
-            key = (datum, slot)
-            if key in podaci_termina:
-                html += f"""
-                    <td class='dan-kolona'>
-                        <button class='slot-dugme slot-zauzet' 
-                                onclick="klikniSlot('zauzet', '{datum}', '{slot}')">
-                        </button>
-                    </td>
-                """
-            else:
-                html += f"""
-                    <td class='dan-kolona'>
-                        <button class='slot-dugme slot-slobodan' 
-                                onclick="klikniSlot('slobodan', '{datum}', '{slot}')">
-                        </button>
-                    </td>
-                """
-        html += "</tr>"
+        cols = st.columns([1] + [1]*len(datumi))
+        with cols[0]:
+            st.write(slot)
+        
+        for i, datum in enumerate(datumi):
+            datum_str = datum.strftime("%Y-%m-%d")
+            key = (datum_str, slot)
+            with cols[i+1]:
+                if key in podaci_termina:
+                    # Zauzeto – crveno dugme
+                    if st.button("🔴", key=f"zauzet_{datum_str}_{slot}", use_container_width=True):
+                        # Sačuvaj klik u session_state
+                        st.session_state['kalendar_klik'] = {
+                            'tip': 'zauzet',
+                            'datum': datum_str,
+                            'vreme': slot
+                        }
+                        st.rerun()
+                else:
+                    # Slobodno – zeleno dugme
+                    if st.button("🟢", key=f"slobodan_{datum_str}_{slot}", use_container_width=True):
+                        st.session_state['kalendar_klik'] = {
+                            'tip': 'slobodan',
+                            'datum': datum_str,
+                            'vreme': slot
+                        }
+                        st.rerun()
 
-    html += """
-        </tbody>
-    </table>
-    </div>
-    """
-
-    components.html(html, height=600, scrolling=False)
-
-    # --- OBRADA KLIKA (preko query_params) ---
-    # Proveri da li postoje query parametri
-    tip = st.query_params.get("tip")
-    datum = st.query_params.get("datum")
-    vreme = st.query_params.get("vreme")
-    akcija = st.query_params.get("akcija")
-
-    if akcija == "klik" and tip and datum and vreme:
-        # Sačuvaj u session_state
-        st.session_state['kalendar_klik'] = {
-            'tip': tip,
-            'datum': datum,
-            'vreme': vreme
-        }
-        # Očisti query parametre (da ne bi ponovo obrađivali)
-        st.query_params.clear()
-        st.rerun()
-
-    # --- Prikaz detalja na osnovu session_state ---
+    # --- OBRADA KLIKA (na osnovu session_state) ---
     if 'kalendar_klik' in st.session_state and st.session_state['kalendar_klik'] is not None:
         klik = st.session_state['kalendar_klik']
         
@@ -1025,7 +898,7 @@ def prikaz_nedeljnog_kalendara():
                     else:
                         st.warning("⚠️ Popunite ime i telefon.")
 
-            if st.button("✖️ Odustani", key="odustani_slobodan"):
+            if st.button("✖️ Odustani", key="odustani_slobodan_novi"):
                 st.session_state['kalendar_klik'] = None
                 st.rerun()
 
