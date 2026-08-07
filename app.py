@@ -27,82 +27,60 @@ def obradi_kalendar_klik():
 # Pozovi funkciju odmah
 obradi_kalendar_klik()
 
-# --- PODEŠAVANJE STRANICE ---
 # --- STILIZACIJA IZGLEDA ---
 st.markdown("""
 <style>
-
 .stApp {
     background-color: #1e1e1e;
     color: white;
 }
-
-/* Kartice sa informacijama */
 div[data-testid="stMetric"] {
     background-color: #2b2b2b;
     border: 2px solid #d4af37;
     padding: 15px;
     border-radius: 15px;
 }
-
 .stMarkdown p {
     color: white !important;
     font-weight: 600;
 }
-
-/* Tekst */
 .stMarkdown {
     color: white;
 }
-
-/* Dugmad */
 .stButton > button {
     background-color: #2b2b2b;
     color: #d4af37;
     border: 2px solid #d4af37;
     border-radius: 10px;
 }
-
 .stButton > button:hover {
     background-color: #d4af37;
     color: black;
 }
-
-/* Naslov termina */
 h2, h3 {
     color: white !important;
 }
-
-/* Polja za unos - datum i izbori */
 div[data-baseweb="input"] {
     background-color: #2b2b2b;
     border: 1px solid #d4af37;
     border-radius: 10px;
 }
-
 div[data-baseweb="select"] {
     background-color: #2b2b2b;
 }
-
 input {
     color: white !important;
     background-color: #2b2b2b !important;
 }
-
-/* Datum - naziv i izabrani datum */
 [data-testid="stDateInput"] * {
     color: white !important;
 }
-
-/* Brojevi u finansijskim karticama */
 div[data-testid="stMetric"] [data-testid="stMetricValue"] {
     color: white !important;
 }
-
 div[data-testid="stMetric"] [data-testid="stMetricLabel"] {
     color: white !important;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -167,8 +145,6 @@ def generisi_slotove_za_dan(datum):
     trenutno = pocetak
 
     while trenutno < kraj:
-
-        # Pauza 12:00 - 13:00
         if trenutno >= datetime.strptime(f"{datum} 12:00", "%Y-%m-%d %H:%M") and \
            trenutno < datetime.strptime(f"{datum} 13:00", "%Y-%m-%d %H:%M"):
             trenutno += timedelta(minutes=30)
@@ -235,23 +211,18 @@ def proveri_slotove_za_uslugu(datum, vreme, trajanje):
         return None
 
     potrebni_slotovi = []
-
     prethodno_vreme = None
 
     for i in range(broj_slotova):
         slot_vreme, ime = svi_slotovi[start_index + i]
 
-        # slot mora biti slobodan
         if ime is not None:
             return None
 
-        # proverava da nema prekida (pauza)
         if prethodno_vreme:
             t1 = datetime.strptime(prethodno_vreme, "%H:%M")
             t2 = datetime.strptime(slot_vreme, "%H:%M")
-
             razlika = (t2 - t1).seconds // 60
-
             if razlika != 30:
                 return None
 
@@ -388,7 +359,6 @@ def get_monthly_earnings_breakdown():
             kartica = total if total else 0
 
     ukupno = kes + kartica
-
     return ukupno, kes, kartica
 
 def get_yearly_earnings_breakdown():
@@ -428,7 +398,6 @@ def get_yearly_earnings_breakdown():
             kartica = total if total else 0
 
     ukupno = kes + kartica
-
     return ukupno, kes, kartica
 
 def moze_naplata(datum, vremena):
@@ -439,19 +408,12 @@ def moze_naplata(datum, vremena):
     else:
         termin_datum = datum
 
-    # Ne moze naplata termina koji je u buducnosti
     if termin_datum > sada.date():
         return False
 
-    # Ako je danas, proverava vreme zavrsetka termina
     if termin_datum == sada.date():
         poslednje_vreme = max(vremena)
-
-        termin_vreme = datetime.strptime(
-            poslednje_vreme,
-            "%H:%M"
-        ).time()
-
+        termin_vreme = datetime.strptime(poslednje_vreme, "%H:%M").time()
         if termin_vreme > sada.time():
             return False
 
@@ -624,17 +586,15 @@ def admin_rucno_zakazi():
                 st.warning("Popunite ime i telefon.")
 
 # ============================================================
-# NOVA FUNKCIJA ZA NEDELJNI KALENDAR (SA AKCIJAMA)
+# NEDELJNI KALENDAR SA AKCIJAMA
 # ============================================================
 def prikaz_nedeljnog_kalendara():
     st.subheader("Nedeljni pregled")
 
-    # --- Generisi datume za tekuci nedelju ---
     danas = datetime.now().date()
     pocetak_nedelje = danas - timedelta(days=danas.weekday())
     datumi = [pocetak_nedelje + timedelta(days=i) for i in range(7)]
 
-    # --- Dohvati sve zauzete termine iz baze ---
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
     placeholders = ','.join(['?'] * len(datumi))
@@ -651,7 +611,6 @@ def prikaz_nedeljnog_kalendara():
         datum, vreme, ime, telefon, usluga, cena = row
         podaci_termina[(datum, vreme)] = (ime, telefon, usluga, cena)
 
-    # --- Generisi slotove (09:00 - 20:00, bez pauze) ---
     slotovi = []
     trenutno = datetime.strptime("09:00", "%H:%M")
     kraj = datetime.strptime("20:00", "%H:%M")
@@ -663,11 +622,9 @@ def prikaz_nedeljnog_kalendara():
         slotovi.append(vreme_str)
         trenutno += timedelta(minutes=30)
 
-    # --- Pripremi podatke za HTML tabelu ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
 
-    # --- Generisi HTML + JavaScript ---
     html = f"""
     <style>
         .kalendar-wrapper {{
@@ -814,7 +771,6 @@ def prikaz_nedeljnog_kalendara():
 
     components.html(html, height=500, scrolling=False)
 
-    # --- Obrada klikova ---
     if 'kalendar_klik' in st.session_state and st.session_state['kalendar_klik'] is not None:
         klik = st.session_state['kalendar_klik']
         
@@ -965,4 +921,32 @@ def prikaz_nedeljnog_kalendara():
                                                 st.error("Greska pri prezakazivanju.")
 
                             with col_odustani_pre:
-                                if st.button("Odustani od prezakazivanja", key=f"odustani_pre
+                                if st.button("Odustani od prezakazivanja", key=f"odustani_prezakazi_{ids[0]}"):
+                                    st.session_state['prezakazi_ids'] = None
+                                    st.rerun()
+                        else:
+                            st.warning("Nema slobodnih termina za izabrani datum.")
+
+                    if st.button("Zatvori detalje", key=f"zatvori_crveno_{ids[0]}"):
+                        st.session_state['naplata_id_crveno'] = None
+                        st.session_state['prezakazi_ids'] = None
+                        st.session_state['kalendar_klik'] = None
+                        st.rerun()
+
+                else:
+                    st.warning("Podaci za ovaj termin nisu pronađeni.")
+                    st.session_state['kalendar_klik'] = None
+                    st.rerun()
+
+            else:
+                st.warning("Podaci za ovaj termin nisu pronađeni.")
+                st.session_state['kalendar_klik'] = None
+                st.rerun()
+
+        elif tip == 'slobodan':
+            st.divider()
+            st.subheader("Novi termin")
+            st.write(f"Datum: {datum}  Vreme: {vreme}")
+
+            with st.form(key="novi_termin_kalendar"):
+                ime = st.text_input
