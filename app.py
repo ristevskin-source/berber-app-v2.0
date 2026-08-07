@@ -2,6 +2,27 @@ import streamlit as st
 import sqlite3
 from datetime import datetime, timedelta
 import streamlit.components.v1 as components
+# ============================================================
+# POSEBNO ZA KALENDAR - HVAĆANJE KLIKOVA
+# ============================================================
+def obradi_kalendar_klik():
+    """Ova funkcija se poziva na samom početku da uhvati query parametre"""
+    tip = st.query_params.get("tip")
+    datum = st.query_params.get("datum")
+    vreme = st.query_params.get("vreme")
+    akcija = st.query_params.get("akcija")
+    
+    if akcija == "klik" and tip and datum and vreme:
+        st.session_state['kalendar_klik'] = {
+            'tip': tip,
+            'datum': datum,
+            'vreme': vreme
+        }
+        st.query_params.clear()
+        st.rerun()
+
+# Pozovi funkciju odmah
+obradi_kalendar_klik()
 
 # --- PODEŠAVANJE STRANICE ---
 # --- STILIZACIJA IZGLEDA ---
