@@ -226,7 +226,7 @@ def proveri_slotove_za_uslugu(datum, vreme, trajanje):
 
             razlika = (t2 - t1).seconds // 60
 
-            if razlika != 15:
+            if razlika != 30:
                 return None
 
         potrebni_slotovi.append(slot_vreme)
