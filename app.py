@@ -665,12 +665,11 @@ def prikaz_nedeljnog_kalendara():
     kraj = datetime.strptime("20:00", "%H:%M")
     while trenutno < kraj:
         vreme_str = trenutno.strftime("%H:%M")
-        if "13:00" <= vreme_str < "14:00":
-            trenutno += timedelta(minutes=15)
+        if "12:00" <= vreme_str < "13:00":
+            trenutno += timedelta(minutes=30)  # 30 minuta
             continue
         slotovi.append(vreme_str)
-        trenutno += timedelta(minutes=30)
-
+        trenutno += timedelta(minutes=30)      # 30 minuta
     # --- 6. Pripremi podatke za HTML tabelu ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
     dani_vrednosti = [d.strftime("%Y-%m-%d") for d in datumi]
