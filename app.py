@@ -1006,7 +1006,7 @@ with tab1:
             <p><strong>Trajanje:</strong> {detalji['trajanje']} min</p>
             <p><strong>Cena:</strong> {detalji['cena']} din</p>
             <p><strong>Klijent:</strong> {detalji['ime']}</p>
-            <p style="margin-top:15px; font-size:1.2em; color:#d4af37;">✂️ Vidimo se!</p>
+            <p style="margin-top:15px; font-size:1.2em; color:#d4af37;"> VIDIMO SE!</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("📅 Zakaži novi termin"):
