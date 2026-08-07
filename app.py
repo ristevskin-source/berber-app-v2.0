@@ -143,10 +143,10 @@ def generisi_slotove_za_dan(datum):
 
     while trenutno < kraj:
 
-        # Pauza 13:00 - 14:00
-        if trenutno >= datetime.strptime(f"{datum} 13:00", "%Y-%m-%d %H:%M") and \
-           trenutno < datetime.strptime(f"{datum} 14:00", "%Y-%m-%d %H:%M"):
-            trenutno += timedelta(minutes=30)
+        # Pauza 12:00 - 13:00
+        if trenutno >= datetime.strptime(f"{datum} 12:00", "%Y-%m-%d %H:%M") and \
+           trenutno < datetime.strptime(f"{datum} 13:00", "%Y-%m-%d %H:%M"):
+            trenutno += timedelta(minutes=30)  # <--- PROMENA: 30 umesto 15
             continue
 
         vreme = trenutno.strftime("%H:%M")
@@ -166,7 +166,7 @@ def generisi_slotove_za_dan(datum):
                 (None, datum, vreme, None, None, None, 'zakazan')
             )
 
-        trenutno += timedelta(minutes=30)
+        trenutno += timedelta(minutes=30)  # <--- PROMENA: 30 umesto 15
 
     conn.commit()
     conn.close()
@@ -229,7 +229,7 @@ def proveri_slotove_za_uslugu(datum, vreme, trajanje):
 
             razlika = (t2 - t1).seconds // 60
 
-            if razlika != 30:
+            if razlika != 30:  # <--- PROMENA: 30 umesto 15
                 return None
 
         potrebni_slotovi.append(slot_vreme)
