@@ -999,7 +999,7 @@ with tab1:
         st.balloons()
         st.markdown(f"""
         <div style="background-color: #3a3a3a; padding: 20px; border-radius: 15px; border-left: 6px solid #d4af37; box-shadow: 0 4px 12px rgba(0,0,0,0.5); margin: 20px 0;">
-            <h2 style="color: #d4af37; margin:0;">✅ Uspešno ste zakazali!</h2>
+            <h2 style="color: #d4af37; margin:0;">OK Uspešno ste zakazali!</h2>
             <p><strong>Usluga:</strong> {detalji['usluga']}</p>
             <p><strong>Datum:</strong> {formatiraj_datum(detalji['datum'])}</p>
             <p><strong>Vreme:</strong> {detalji['vreme']}</p>
