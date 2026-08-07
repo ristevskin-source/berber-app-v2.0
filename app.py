@@ -132,7 +132,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# --- FUNKCIJE ZA GENERISANJE SLOTOVA ---
 def generisi_slotove_za_dan(datum):
     conn = sqlite3.connect('termini.db')
     c = conn.cursor()
@@ -147,7 +146,7 @@ def generisi_slotove_za_dan(datum):
         # Pauza 12:00 - 13:00
         if trenutno >= datetime.strptime(f"{datum} 12:00", "%Y-%m-%d %H:%M") and \
            trenutno < datetime.strptime(f"{datum} 13:00", "%Y-%m-%d %H:%M"):
-            trenutno += timedelta(minutes=15)
+            trenutno += timedelta(minutes=30)
             continue
 
         vreme = trenutno.strftime("%H:%M")
@@ -167,7 +166,7 @@ def generisi_slotove_za_dan(datum):
                 (None, datum, vreme, None, None, None, 'zakazan')
             )
 
-        trenutno += timedelta(minutes=15)
+        trenutno += timedelta(minutes=30)
 
     conn.commit()
     conn.close()
