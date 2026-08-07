@@ -622,19 +622,19 @@ def admin_rucno_zakazi():
         vreme_opcije = [v[0] for v in slobodni_slotovi]
         izabrano_vreme = st.selectbox("Termin", vreme_opcije)
         
-        potvrdi = st.form_submit_button("✅ Zakaži za klijenta")
+        potvrdi = st.form_submit_button("OK Zakaži za klijenta")
         
         if potvrdi:
             if ime and telefon and ime.strip() and telefon.strip():
                 slotovi = proveri_slotove_za_uslugu(datum, izabrano_vreme, usluga_trajanje)
                 if slotovi is None:
-                    st.error("❌ Nema dovoljno slobodnih termina za ovu uslugu u izabrano vreme.")
+                    st.error("X Nema dovoljno slobodnih termina za ovu uslugu u izabrano vreme.")
                 else:
                     if rezervisi_slotove(datum, slotovi, ime, telefon, usluga_ime, usluga_cena, usluga_trajanje):
-                        st.success(f"✅ Uspešno zakazano: {ime} - {usluga_ime} u {izabrano_vreme}")
+                        st.success(f"OK Uspešno zakazano: {ime} - {usluga_ime} u {izabrano_vreme}")
                         st.rerun()
                     else:
-                        st.error("❌ Greška pri rezervaciji.")
+                        st.error("X Greška pri rezervaciji.")
             else:
                 st.warning("⚠️ Popunite ime i telefon.")
 
@@ -769,7 +769,7 @@ def prikaz_nedeljnog_kalendara():
                         col_akcije1, col_akcije2, col_akcije3 = st.columns(3)
 
                         with col_akcije1:
-                            if st.button("❌ Otkaži termin", key=f"otkazi_crveno_{ids[0]}"):
+                            if st.button("X Otkaži termin", key=f"otkazi_crveno_{ids[0]}"):
                                 for id in ids:
                                     otkazi_termin(id)
                                 st.session_state['kalendar_klik'] = None
@@ -791,7 +791,7 @@ def prikaz_nedeljnog_kalendara():
                                 st.rerun()
 
                     elif status == 'naplacen':
-                        st.success(f"✅ Naplaćeno ({payment_method})")
+                        st.success(f"X Naplaćeno ({payment_method})")
 
                     # --- NAPLATA (ako je kliknuto) ---
                     if st.session_state.get('naplata_id_crveno') == ids:
@@ -807,7 +807,7 @@ def prikaz_nedeljnog_kalendara():
                         
                         col_potvrdi, col_odustani = st.columns(2)
                         with col_potvrdi:
-                            if st.button("✅ Potvrdi naplatu", key=f"potvrdi_crveno_{ids[0]}"):
+                            if st.button("X Potvrdi naplatu", key=f"potvrdi_crveno_{ids[0]}"):
                                 if moze_naplata(datum, vremena):
                                     for id in ids:
                                         naplati_termin(id, payment_choice)
@@ -818,7 +818,7 @@ def prikaz_nedeljnog_kalendara():
                                     st.warning("⏳ Termin još nije završen. Naplata nije moguća pre završetka usluge.")
                         
                         with col_odustani:
-                            if st.button("❌ Odustani", key=f"odustani_crveno_{ids[0]}"):
+                            if st.button("X Odustani", key=f"odustani_crveno_{ids[0]}"):
                                 st.session_state['naplata_id_crveno'] = None
                                 st.rerun()
 
@@ -850,7 +850,7 @@ def prikaz_nedeljnog_kalendara():
 
                             col_prezakazi, col_odustani_pre = st.columns(2)
                             with col_prezakazi:
-                                if st.button("✅ Potvrdi prezakazivanje", key=f"potvrdi_prezakazi_{ids[0]}"):
+                                if st.button("OK Potvrdi prezakazivanje", key=f"potvrdi_prezakazi_{ids[0]}"):
                                     conn = sqlite3.connect('termini.db')
                                     c = conn.cursor()
                                     c.execute("SELECT trajanje FROM cenovnik WHERE usluga=?", (usluga,))
@@ -860,21 +860,21 @@ def prikaz_nedeljnog_kalendara():
                                     if trajanje:
                                         slotovi_za_uslugu = proveri_slotove_za_uslugu(novi_datum, novo_vreme, trajanje[0])
                                         if slotovi_za_uslugu is None:
-                                            st.error("❌ Nema dovoljno slobodnih termina za ovu uslugu u izabrano vreme.")
+                                            st.error("X Nema dovoljno slobodnih termina za ovu uslugu u izabrano vreme.")
                                         else:
                                             for id in ids:
                                                 otkazi_termin(id)
                                             ime_staro, telefon_staro, usluga_staro, cena_staro = st.session_state['prezakazi_klijent']
                                             if rezervisi_slotove(novi_datum, slotovi_za_uslugu, ime_staro, telefon_staro, usluga_staro, cena_staro, trajanje[0]):
-                                                st.success("✅ Uspešno prezakazano!")
+                                                st.success("OK Uspešno prezakazano!")
                                                 st.session_state['prezakazi_ids'] = None
                                                 st.session_state['kalendar_klik'] = None
                                                 st.rerun()
                                             else:
-                                                st.error("❌ Greška pri prezakazivanju.")
+                                                st.error("X Greška pri prezakazivanju.")
 
                             with col_odustani_pre:
-                                if st.button("❌ Odustani od prezakazivanja", key=f"odustani_prezakazi_{ids[0]}"):
+                                if st.button("X Odustani od prezakazivanja", key=f"odustani_prezakazi_{ids[0]}"):
                                     st.session_state['prezakazi_ids'] = None
                                     st.rerun()
                         else:
@@ -920,20 +920,20 @@ def prikaz_nedeljnog_kalendara():
                 usluga_cena = usluge[idx][1]
                 usluga_trajanje = usluge[idx][2]
 
-                potvrdi = st.form_submit_button("✅ Zakaži")
+                potvrdi = st.form_submit_button("OK Zakaži")
 
                 if potvrdi:
                     if ime and telefon and ime.strip() and telefon.strip():
                         slotovi_za_uslugu = proveri_slotove_za_uslugu(datum, vreme, usluga_trajanje)
                         if slotovi_za_uslugu is None:
-                            st.error("❌ Nema dovoljno slobodnih termina za ovu uslugu u izabrano vreme.")
+                            st.error("XNema dovoljno slobodnih termina za ovu uslugu u izabrano vreme.")
                         else:
                             if rezervisi_slotove(datum, slotovi_za_uslugu, ime, telefon, usluga_ime, usluga_cena, usluga_trajanje):
-                                st.success("✅ Termin uspešno zakazan!")
+                                st.success("OK Termin uspešno zakazan!")
                                 st.session_state['kalendar_klik'] = None
                                 st.rerun()
                             else:
-                                st.error("❌ Greška pri rezervaciji.")
+                                st.error("X Greška pri rezervaciji.")
                     else:
                         st.warning("⚠️ Popunite ime i telefon.")
 
@@ -1045,20 +1045,20 @@ with tab1:
                         slotovi = proveri_slotove_za_uslugu(datum, kliknuto_vreme, usluga['trajanje'])
                         
                         if slotovi is None:
-                            st.error("❌ Nema dovoljno slobodnih termina za ovu uslugu u izabrano vreme.")
+                            st.error("X Nema dovoljno slobodnih termina za ovu uslugu u izabrano vreme.")
                         else:
-                            st.success(f"✅ Usluga **{usluga['ime']}** traje **{usluga['trajanje']} min** i zauzima **{len(slotovi)} slotova**.")
+                            st.success(f"X Usluga **{usluga['ime']}** traje **{usluga['trajanje']} min** i zauzima **{len(slotovi)} slotova**.")
                             st.write("Zauzeće sledeće slotove:")
                             for s in slotovi:
                                 st.markdown(f"- 🔴 {s}")
                             
-                            potvrdi = st.form_submit_button("✅ Zakaži")
+                            potvrdi = st.form_submit_button("X Zakaži")
                             
                             if potvrdi:
                                 if ime and telefon and ime.strip() and telefon.strip():
                                     slotovi = proveri_slotove_za_uslugu(datum, kliknuto_vreme, usluga['trajanje'])
                                     if slotovi is None:
-                                        st.error("❌ Nažalost, neko je već zauzeo neki od ovih slotova. Molimo izaberite drugi termin.")
+                                        st.error("X Nažalost, neko je već zauzeo neki od ovih slotova. Molimo izaberite drugi termin.")
                                         st.session_state['izabrani_termin'] = None
                                         st.rerun()
                                     else:
@@ -1076,11 +1076,11 @@ with tab1:
                                             }
                                             st.rerun()
                                         else:
-                                            st.error("❌ Greška pri rezervaciji.")
+                                            st.error("X Greška pri rezervaciji.")
                                 else:
-                                    st.warning("⚠️ Popunite ime i telefon.")
+                                    st.warning("! Popunite ime i telefon.")
         else:
-            st.error("❌ Nema dostupnih datuma.")
+            st.error("X Nema dostupnih datuma.")
 
 # ============================================================
 # TAB 2: ADMIN PANEL
@@ -1276,7 +1276,7 @@ with tab2:
                         st.write(f"{usluga} ({cena} din)")
                     with cols[4]:
                         if status == 'zakazan':
-                            if st.button("❌ Otkaži", key=f"otkazi_grupa_{ids[0]}"):
+                            if st.button("X Otkaži", key=f"otkazi_grupa_{ids[0]}"):
                                 for id in ids:
                                     otkazi_termin(id)
                                 st.rerun()
@@ -1286,10 +1286,10 @@ with tab2:
                                 st.rerun()
 
                         elif status == 'naplacen':
-                            st.success(f"✅ Naplaćeno ({payment_method})")
+                            st.success(f"OK Naplaćeno ({payment_method})")
 
                         elif status == 'otkazan':
-                            st.warning("❌ Otkazano")
+                            st.warning("X Otkazano")
 
 
                     with cols[5]:
@@ -1305,7 +1305,7 @@ with tab2:
                             col_a, col_b = st.columns(2)
 
                             with col_a:
-                                if st.button("✅ Potvrdi", key=f"potvrdi_grupa_{ids[0]}"):
+                                if st.button("OK Potvrdi", key=f"potvrdi_grupa_{ids[0]}"):
 
                                     if moze_naplata(admin_datum, vremena):
 
@@ -1323,7 +1323,7 @@ with tab2:
 
 
                             with col_b:
-                                if st.button("❌ Odustani", key=f"odustani_grupa_{ids[0]}"):
+                                if st.button("X Odustani", key=f"odustani_grupa_{ids[0]}"):
                                     st.session_state['naplata_id'] = None
                                     st.rerun()
 
