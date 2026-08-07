@@ -7,6 +7,7 @@ import streamlit.components.v1 as components
 # ============================================================
 def obradi_kalendar_klik():
     """Ova funkcija se poziva na samom početku da uhvati query parametre"""
+    st.write("DEBUG: Funkcija je pozvana!") 
     tip = st.query_params.get("tip")
     datum = st.query_params.get("datum")
     vreme = st.query_params.get("vreme")
