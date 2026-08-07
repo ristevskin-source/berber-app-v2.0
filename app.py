@@ -203,7 +203,10 @@ def proveri_slotove_za_uslugu(datum, vreme, trajanje):
     if start_index is None:
         return None
 
+    # Izračunaj broj potrebnih slotova (zaokruži na više)
     broj_slotova = trajanje // 30
+    if trajanje % 30 != 0:
+        broj_slotova += 1
 
     if start_index + broj_slotova > len(svi_slotovi):
         return None
@@ -233,7 +236,6 @@ def proveri_slotove_za_uslugu(datum, vreme, trajanje):
         prethodno_vreme = slot_vreme
 
     return potrebni_slotovi
-
 def rezervisi_slotove(datum, slotovi, ime, telefon, usluga_ime, usluga_cena, usluga_trajanje):
     try:
         conn = sqlite3.connect('termini.db')
