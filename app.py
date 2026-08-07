@@ -29,80 +29,96 @@ obradi_kalendar_klik()
 # --- STILIZACIJA IZGLEDA ---
 st.markdown("""
 <style>
-
-.stApp {
-    background-color: #1e1e1e;
-    color: white;
-}
-
-/* Kartice sa informacijama */
-div[data-testid="stMetric"] {
-    background-color: #2b2b2b;
-    border: 2px solid #d4af37;
-    padding: 15px;
-    border-radius: 15px;
-}
-
-.stMarkdown p {
-    color: white !important;
-    font-weight: 600;
-}
-
-/* Tekst */
-.stMarkdown {
-    color: white;
-}
-
-/* Dugmad */
-.stButton > button {
-    background-color: #2b2b2b;
-    color: #d4af37;
-    border: 2px solid #d4af37;
-    border-radius: 10px;
-}
-
-.stButton > button:hover {
-    background-color: #d4af37;
-    color: black;
-}
-
-/* Naslov termina */
-h2, h3 {
-    color: white !important;
-}
-
-/* Polja za unos - datum i izbori */
-div[data-baseweb="input"] {
-    background-color: #2b2b2b;
-    border: 1px solid #d4af37;
-    border-radius: 10px;
-}
-
-div[data-baseweb="select"] {
-    background-color: #2b2b2b;
-}
-
-input {
-    color: white !important;
-    background-color: #2b2b2b !important;
-}
-
-/* Datum - naziv i izabrani datum */
-[data-testid="stDateInput"] * {
-    color: white !important;
-}
-
-/* Brojevi u finansijskim karticama */
-div[data-testid="stMetric"] [data-testid="stMetricValue"] {
-    color: white !important;
-}
-
-div[data-testid="stMetric"] [data-testid="stMetricLabel"] {
-    color: white !important;
-}
-
+    .kalendar-wrapper {{
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: 80vh;
+        -webkit-overflow-scrolling: touch;
+        margin: 5px 0;
+        border: 1px solid #444;
+        border-radius: 6px;
+        background-color: #1e1e1e;
+    }}
+    .kalendar-tabela {{
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 400px;
+        font-size: 11px;
+        color: white;
+    }}
+    .kalendar-tabela th, .kalendar-tabela td {{
+        padding: 2px 1px;
+        text-align: center;
+        border-bottom: 1px solid #333;
+        border-right: 1px solid #333;
+    }}
+    .kalendar-tabela th {{
+        background-color: #2b2b2b;
+        color: #d4af37;
+        font-weight: bold;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        font-size: 10px;
+        padding: 2px 1px;
+    }}
+    .vreme-kolona {{
+        background-color: #2b2b2b;
+        font-weight: bold;
+        color: #aaa;
+        position: sticky;
+        left: 0;
+        z-index: 5;
+        min-width: 30px;
+        max-width: 30px;
+        white-space: nowrap;
+        padding: 1px 1px !important;
+        font-size: 9px;
+    }}
+    .slot-dugme {{
+        display: inline-block;
+        width: 22px;
+        height: 22px;
+        border-radius: 3px;
+        border: none;
+        cursor: pointer;
+        font-size: 0px;
+        padding: 0;
+        margin: 0 auto;
+        transition: transform 0.1s;
+        min-width: 16px;
+    }}
+    .slot-dugme:active {{
+        transform: scale(0.90);
+    }}
+    .slot-slobodan {{
+        background-color: #2e7d32;
+    }}
+    .slot-slobodan:hover {{
+        background-color: #43a047;
+    }}
+    .slot-zauzet {{
+        background-color: #c62828;
+    }}
+    .slot-zauzet:hover {{
+        background-color: #e53935;
+    }}
+    .dan-kolona {{
+        min-width: 30px;
+        max-width: 30px;
+    }}
+    .kalendar-wrapper::-webkit-scrollbar {{
+        height: 4px;
+        width: 4px;
+    }}
+    .kalendar-wrapper::-webkit-scrollbar-track {{
+        background: #2b2b2b;
+    }}
+    .kalendar-wrapper::-webkit-scrollbar-thumb {{
+        background: #d4af37;
+        border-radius: 2px;
+    }}
 </style>
-""", unsafe_allow_html=True)
 
 # --- INICIJALIZACIJA BAZE ---
 def init_db():
