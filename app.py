@@ -189,7 +189,7 @@ def generisi_slotove_za_dan(datum):
                 (None, datum, vreme, None, None, None, 'zakazan')
             )
 
-        trenutno += timedelta(minutes=15)
+        trenutno += timedelta(minutes=30)
 
     conn.commit()
     conn.close()
@@ -227,7 +227,7 @@ def proveri_slotove_za_uslugu(datum, vreme, trajanje):
     if start_index is None:
         return None
 
-    broj_slotova = trajanje // 15
+    broj_slotova = trajanje // 30
 
     if start_index + broj_slotova > len(svi_slotovi):
         return None
@@ -250,7 +250,7 @@ def proveri_slotove_za_uslugu(datum, vreme, trajanje):
 
             razlika = (t2 - t1).seconds // 60
 
-            if razlika != 15:
+            if razlika != 30:
                 return None
 
         potrebni_slotovi.append(slot_vreme)
