@@ -106,13 +106,13 @@ def init_db():
     )''')
 
     usluge = [
-        ('💇 Šišanje', 1500, 45),
+        ('💇 Šišanje', 1500, 60),
         ('💇 Šišanje + pranje kose', 1900, 60),
         ('💇 Šišanje + brada', 2000, 60),
-        ('💇 Šišanje + brada + pranje kose', 2400, 75),
+        ('💇 Šišanje + brada + pranje kose', 2400, 90),
         ('💇 Šišanje + brada + pranje kose + obrve', 2800, 90),
         ('🧔 Brada (samo)', 1000, 30),
-        ('✨ Obrve (samo)', 400, 15)
+        ('✨ Obrve (samo)', 400, 130)
     ]
 
     c.executemany(
@@ -143,9 +143,9 @@ def generisi_slotove_za_dan(datum):
 
     while trenutno < kraj:
 
-        # Pauza 12:00 - 13:00
-        if trenutno >= datetime.strptime(f"{datum} 12:00", "%Y-%m-%d %H:%M") and \
-           trenutno < datetime.strptime(f"{datum} 13:00", "%Y-%m-%d %H:%M"):
+        # Pauza 13:00 - 14:00
+        if trenutno >= datetime.strptime(f"{datum} 13:00", "%Y-%m-%d %H:%M") and \
+           trenutno < datetime.strptime(f"{datum} 14:00", "%Y-%m-%d %H:%M"):
             trenutno += timedelta(minutes=30)
             continue
 
@@ -203,7 +203,7 @@ def proveri_slotove_za_uslugu(datum, vreme, trajanje):
     if start_index is None:
         return None
 
-    broj_slotova = trajanje // 15
+    broj_slotova = trajanje // 30
 
     if start_index + broj_slotova > len(svi_slotovi):
         return None
@@ -498,7 +498,7 @@ def prikazi_slotove(datum):
 
     red = []
     for vreme, ime in svi_slotovi:
-        if "12:00" <= vreme < "13:00":
+        if "13:00" <= vreme < "14:00":
             red.append("PAUZA")
         elif ime is not None:
             red.append(f"🔴 {vreme}")
@@ -663,11 +663,11 @@ def prikaz_nedeljnog_kalendara():
     kraj = datetime.strptime("20:00", "%H:%M")
     while trenutno < kraj:
         vreme_str = trenutno.strftime("%H:%M")
-        if "12:00" <= vreme_str < "13:00":
+        if "13:00" <= vreme_str < "14:00":
             trenutno += timedelta(minutes=15)
             continue
         slotovi.append(vreme_str)
-        trenutno += timedelta(minutes=15)
+        trenutno += timedelta(minutes=30)
 
     # --- 6. Pripremi podatke za HTML tabelu ---
     dani_oznake = [d.strftime("%a %d.") for d in datumi]
